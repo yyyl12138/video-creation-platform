@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  # MySQL Configuration
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # [TODO] 队友请确认: 数据库地址和库名 video_generation_platform 是否正确
+    url: jdbc:mysql://localhost:3306/video_generation_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    # [TODO] 队友请修改: 你的本地数据库账号
+    username: root
+    # [TODO] 队友请修改: 你的本地数据库密码
+    password: password
+
+  # Redis Configuration
+  data:
+    redis:
+      # [TODO] 队友请修改: Redis服务地址 (默认为 localhost)
+      host: localhost
+      port: 6379
+      database: 0
+      # [TODO] 队友请修改: Redis密码 (若无则留空)
+      password: 
+
+  # File Upload Configuration (Custom)
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# MyBatis Plus Configuration
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      id-type: auto # Default, specific tables override
+
+# Sa-Token Configuration
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: 7200
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+  # [TODO] 队友请注意: 开发环境可用此Demo Key，生产环境务必修改
+  jwt-secret-key: helloworld123helloworld123helloworld123 # Demo Key
+
+# Knife4j Configuration
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+
+# Custom File Path Config
+file:
+  # [TODO] 队友请修改: [重要] 必须改为你电脑上的本地绝对路径！用于存储上传的文件
+  upload-path: /Users/yangli/Documents/自动化短视频创作平台/storage/
