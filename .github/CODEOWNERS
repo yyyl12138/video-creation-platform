@@ -1,3 +1,3 @@
 # 这行代码的意思是：项目里的所有文件(*)，都归这三个人管
 # 当有人向 main 提 PR 时，系统会自动邀请他们审核
-* @Aipenye @itachiyoyo
+* @Aipenye @itachiyoyo @HHRocco
