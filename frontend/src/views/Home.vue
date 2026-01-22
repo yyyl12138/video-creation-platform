@@ -26,7 +26,7 @@
           <template #header>
             <h3>智能创作</h3>
           </template>
-          <p>AI驱动的视频生成和编辑工具</p>
+          <p>AI驱动的视频生成</p>
         </el-card>
         
         <el-card class="feature-card">
