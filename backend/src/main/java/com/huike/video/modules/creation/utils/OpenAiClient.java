@@ -57,7 +57,7 @@ public class OpenAiClient {
             String result = response.body();
             if (!response.isOk()) {
                 log.error("LLM API Error: status={}, body={}", response.getStatus(), result);
-                throw new BusinessException("LLM Request Failed: " + response.getStatus());
+                throw new BusinessException(500,"LLM Request Failed: " + response.getStatus());
             }
 
             // 4. 解析结果 (Standard OpenAI Format)
@@ -65,7 +65,7 @@ public class OpenAiClient {
             JSONObject json = JSONUtil.parseObj(result);
             JSONArray choices = json.getJSONArray("choices");
             if (choices == null || choices.isEmpty()) {
-                throw new BusinessException("Empty choices from LLM response");
+                throw new BusinessException(500,"Empty choices from LLM response");
             }
             
             JSONObject choice = choices.getJSONObject(0);
@@ -76,7 +76,7 @@ public class OpenAiClient {
             if (e instanceof BusinessException) {
                 throw e;
             }
-            throw new BusinessException("LLM Connection Error: " + e.getMessage());
+            throw new BusinessException(500,"LLM Connection Error: " + e.getMessage());
         }
     }
 }
