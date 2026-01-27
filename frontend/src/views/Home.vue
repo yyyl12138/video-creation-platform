@@ -8,9 +8,7 @@
         <el-button type="primary" size="large" @click="goToLogin">
           立即登录
         </el-button>
-        <el-button size="large" @click="goToRegister">
-          注册账号
-        </el-button>
+       
       </div>
       
       <div class="secondary-actions">

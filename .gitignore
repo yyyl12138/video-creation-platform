@@ -22,3 +22,6 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+
+# 所有位置的 mock 文件夹
+**/mock/
