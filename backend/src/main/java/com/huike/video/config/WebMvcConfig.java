@@ -24,8 +24,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Map local storage to URL path
+        // 旧的上传路径映射 (兼容)
         registry.addResourceHandler("/profile/upload/**")
+                .addResourceLocations("file:" + uploadPath);
+        
+        // 新的存储路径映射 (用于下载的视频、图片、封面等)
+        // 访问 /storage/videos/xxx.mp4 -> 本地 {upload-path}/videos/xxx.mp4
+        registry.addResourceHandler("/storage/**")
                 .addResourceLocations("file:" + uploadPath);
     }
 }
