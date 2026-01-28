@@ -33,4 +33,19 @@ public class CreationResponse implements Serializable {
      * 消耗的 token 数 (估算)
      */
     private Integer usageTokens;
+
+    /**
+     * 任务状态 (SUCCESS, PROCESSING, FAILED)
+     */
+    private String status;
+
+    /**
+     * 封面图 URL
+     */
+    private String coverUrl;
+
+    /**
+     * 错误信息
+     */
+    private String errorMessage;
 }

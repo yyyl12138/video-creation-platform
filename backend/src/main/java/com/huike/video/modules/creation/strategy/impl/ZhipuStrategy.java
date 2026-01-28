@@ -1,7 +1,5 @@
 package com.huike.video.modules.creation.strategy.impl;
 
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.huike.video.common.exception.BusinessException;
 import com.huike.video.modules.creation.domain.dto.CreationRequest;
 import com.huike.video.modules.creation.domain.dto.CreationResponse;
@@ -14,14 +12,14 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * DeepSeek 模型策略实现
- * 也可以复用于其它兼容 OpenAI 协议的模型
+ * 智谱策略
+ * GLM-4 系列模型，使用 OpenAI 兼容协议
  */
 @Slf4j
 @Component
-public class DeepSeekStrategy implements ModelStrategy {
+public class ZhipuStrategy implements ModelStrategy {
 
-    private static final String PROVIDER_NAME = "DEEPSEEK";
+    private static final String PROVIDER_NAME = "ZHIPU";
 
     @Override
     public String getProvider() {
@@ -30,34 +28,25 @@ public class DeepSeekStrategy implements ModelStrategy {
 
     @Override
     public CreationResponse generate(CreationRequest request, AiModel modelConfig) {
-        log.info("Executing DeepSeek Strategy with model: {}", modelConfig.getModelName());
+        log.info("ZhipuStrategy executing, modelKey={}", modelConfig.getModelKey());
 
-        // 1. 提取配置
         Map<String, Object> apiConfig = modelConfig.getApiConfig();
-        if (apiConfig == null) {
-            throw new BusinessException(500,"Config missing for model: " + modelConfig.getModelKey());
-        }
-
         String apiKey = (String) apiConfig.get("apiKey");
         String apiUrl = modelConfig.getApiEndpoint();
-        // 如果 config 中没有指定 modelName，则使用 key 或默认值
-        String callModel = (String) apiConfig.getOrDefault("modelName", "deepseek-chat");
+        String model = modelConfig.getModelKey(); // e.g. glm-4.7-flash
 
         if (apiKey == null || apiUrl == null) {
-            throw new BusinessException(500, "Incomplete config(apiKey/endpoint) for DeepSeek");
+            throw new BusinessException(500, "Incomplete config for Zhipu");
         }
 
-        // 2. 准备请求参数
-        // 支持从 request.extraMap 覆盖 temperature 等
         Double temperature = 0.7;
         if (request.getExtraMap() != null && request.getExtraMap().containsKey("temperature")) {
             temperature = Double.valueOf(request.getExtraMap().get("temperature").toString());
         }
 
-        // 3. 调用通用 OpenAI 客户端
-        OpenAiClient.ChatResult chatResult = OpenAiClient.chatCompletion(apiUrl, apiKey, callModel, request.getPrompt(), temperature);
+        // GLM 兼容 OpenAI 协议
+        OpenAiClient.ChatResult chatResult = OpenAiClient.chatCompletion(apiUrl, apiKey, model, request.getPrompt(), temperature);
 
-        // 4. 封装结果
         return CreationResponse.builder()
                 .content(chatResult.getContent())
                 .usageTokens(chatResult.getTotalTokens())

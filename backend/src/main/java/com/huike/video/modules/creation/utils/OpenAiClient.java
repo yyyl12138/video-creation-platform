@@ -1,12 +1,13 @@
 package com.huike.video.modules.creation.utils;
 
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.huike.video.common.exception.BusinessException;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -22,15 +23,25 @@ public class OpenAiClient {
     private static final int TIMEOUT_MS = 60000; // 60s 超时
 
     /**
+     * Chat Completion 响应结果
+     */
+    @Data
+    @AllArgsConstructor
+    public static class ChatResult {
+        private String content;
+        private Integer totalTokens; // usage.total_tokens
+    }
+
+    /**
      * 调用 Chat Completion 接口
      * @param apiUrl 接口地址 (如 https://api.deepseek.com/chat/completions)
      * @param apiKey API Key
      * @param model 模型名称 (如 deepseek-chat)
      * @param prompt 提示词
      * @param temperature 温度 (0-2)
-     * @return 生成的文本内容
+     * @return ChatResult 包含生成内容和 Token 消耗
      */
-    public static String chatCompletion(String apiUrl, String apiKey, String model, String prompt, Double temperature) {
+    public static ChatResult chatCompletion(String apiUrl, String apiKey, String model, String prompt, Double temperature) {
         // 1. 构建请求体
         Map<String, Object> message = new HashMap<>();
         message.put("role", "user");
@@ -57,26 +68,34 @@ public class OpenAiClient {
             String result = response.body();
             if (!response.isOk()) {
                 log.error("LLM API Error: status={}, body={}", response.getStatus(), result);
-                throw new BusinessException(500,"LLM Request Failed: " + response.getStatus());
+                throw new BusinessException(500, "LLM Request Failed: " + response.getStatus());
             }
 
             // 4. 解析结果 (Standard OpenAI Format)
-            // { "choices": [ { "message": { "content": "..." } } ] }
             JSONObject json = JSONUtil.parseObj(result);
             JSONArray choices = json.getJSONArray("choices");
             if (choices == null || choices.isEmpty()) {
-                throw new BusinessException(500,"Empty choices from LLM response");
+                throw new BusinessException(500, "Empty choices from LLM response");
             }
-            
-            JSONObject choice = choices.getJSONObject(0);
-            return choice.getJSONObject("message").getStr("content");
+
+            String content = choices.getJSONObject(0).getJSONObject("message").getStr("content");
+
+            // 5. 解析 usage
+            Integer totalTokens = 0;
+            JSONObject usage = json.getJSONObject("usage");
+            if (usage != null) {
+                totalTokens = usage.getInt("total_tokens", 0);
+            }
+
+            return new ChatResult(content, totalTokens);
 
         } catch (Exception e) {
             log.error("LLM Exception", e);
             if (e instanceof BusinessException) {
-                throw e;
+                throw (BusinessException) e;
             }
-            throw new BusinessException(500,"LLM Connection Error: " + e.getMessage());
+            throw new BusinessException(500, "LLM Connection Error: " + e.getMessage());
         }
     }
 }
+
