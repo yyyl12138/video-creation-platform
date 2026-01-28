@@ -20,4 +20,12 @@ public class AiModelServiceImpl extends ServiceImpl<AiModelMapper, AiModel> impl
                .eq(AiModel::getIsActive, true);
         return this.getOne(wrapper);
     }
+
+    @Override
+    public AiModel getActiveModelByName(String modelName) {
+        LambdaQueryWrapper<AiModel> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AiModel::getModelName, modelName)
+               .eq(AiModel::getIsActive, true);
+        return this.getOne(wrapper);
+    }
 }

@@ -25,3 +25,11 @@ pnpm-debug.log*
 
 # 所有位置的 mock 文件夹
 **/mock/
+
+# Security & Local Config
+.env
+.env.*
+! .env.example
+secrets.yaml
+application-local.yml
+package-lock.json

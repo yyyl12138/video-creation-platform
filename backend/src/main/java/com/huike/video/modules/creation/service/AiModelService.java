@@ -14,4 +14,11 @@ public interface AiModelService extends IService<AiModel> {
      * @return 模型实体
      */
     AiModel getActiveModelByKey(String modelKey);
+
+    /**
+     * 根据 modelName 获取启用状态的模型配置
+     * @param modelName 模型名称 (易记名称)
+     * @return 模型实体
+     */
+    AiModel getActiveModelByName(String modelName);
 }
