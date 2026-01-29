@@ -164,7 +164,7 @@ const handleSmsLogin = async () => {
     const res = await loginBySms(smsForm.phone, smsForm.code)
     ElMessage.success('登录成功')
     localStorage.setItem('token', res.token)
-    router.push('/home')
+    router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
@@ -196,7 +196,7 @@ const handlePasswordLogin = async () => {
   try {
     const res = await loginByPassword(passwordForm.username, passwordForm.password)
     ElMessage.success('登录成功')
-    
+
     // 处理记住密码功能
     if (rememberMe.value) {
       localStorage.setItem('rememberedLogin', JSON.stringify({
@@ -206,9 +206,9 @@ const handlePasswordLogin = async () => {
     } else {
       localStorage.removeItem('rememberedLogin')
     }
-    
+
     localStorage.setItem('token', res.token)
-    router.push('/home')
+    router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
