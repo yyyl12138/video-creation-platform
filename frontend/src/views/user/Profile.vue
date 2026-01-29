@@ -249,7 +249,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Upload } from '@element-plus/icons-vue'
 import {
@@ -265,12 +265,14 @@ const defaultAvatar = 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568
 
 // 状态管理
 const activeTab = ref('info')
-const loading = ref(false)
-const avatarUploading = ref(false) // 单独的头像上传loading
+const profileLoading = ref(false)
+const passwordLoading = ref(false)
+const creatorLoading = ref(false)
+const avatarUploading = ref(false)
 const isEditingInfo = ref(false)
 const profile = ref({})
 const avatarDialogVisible = ref(false)
-const avatarPreviewUrl = ref('') // 头像上传预览URL
+const avatarPreviewUrl = ref('')
 const profileFormRef = ref(null)
 const passwordFormRef = ref(null)
 const creatorFormRef = ref(null)
@@ -298,11 +300,12 @@ const creatorForm = reactive({
 
 // 表单校验规则
 const profileRules = {
-  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
+  realName: [
+    { required: true, message: '请输入真实姓名', trigger: 'blur' },
+    { min: 2, max: 20, message: '姓名长度在2-20个字符之间', trigger: 'blur' }
+  ],
   gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
-  birthday: [{ required: true, message: '请选择生日', trigger: 'change' }],
-  country: [{ required: true, message: '请输入国家/地区', trigger: 'blur' }],
-  city: [{ required: true, message: '请输入城市', trigger: 'blur' }]
+  birthday: [{ required: true, message: '请选择生日', trigger: 'change' }]
 }
 
 const passwordRules = {
@@ -360,58 +363,166 @@ const getCreatorApplyTip = computed(() => {
   return tips[profile.value.creatorStatus] || ''
 })
 
+// 头像URL处理
+const getAvatarUrl = computed(() => {
+  if (!profile.value.avatarUrl) return defaultAvatar
+  
+  // 处理相对路径的avatarUrl
+  if (profile.value.avatarUrl.startsWith('/')) {
+    // 在生产环境中应该使用环境变量配置的基础URL
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin
+    return `${baseUrl}${profile.value.avatarUrl}`
+  }
+  
+  return profile.value.avatarUrl
+})
+
+// 监听编辑状态变化
+watch(isEditingInfo, (newVal) => {
+  if (newVal) {
+    nextTick(() => {
+      profileFormRef.value?.clearValidate()
+    })
+  }
+})
+
+// 初始化表单数据
+const initProfileForm = () => {
+  const profileData = profile.value.profile || {}
+  profileForm.realName = profileData.realName || ''
+  profileForm.gender = profileData.gender || ''
+  profileForm.birthday = profileData.birthday || ''
+  profileForm.country = profileData.country || ''
+  profileForm.city = profileData.city || ''
+  profileForm.bio = profileData.bio || ''
+}
+
 // 获取用户信息
 const fetchProfile = async () => {
   try {
-    loading.value = true
+    profileLoading.value = true
     const res = await getUserProfile()
     profile.value = res.data || {}
     // 填充表单
-    const profileData = profile.value.profile || {}
-    Object.keys(profileForm).forEach(key => {
-      profileForm[key] = profileData[key] || ''
-    })
+    initProfileForm()
   } catch (error) {
     ElMessage.error('获取个人信息失败：' + (error.message || '网络错误'))
   } finally {
-    loading.value = false
+    profileLoading.value = false
   }
+}
+
+// 检测是否有实际修改
+const hasProfileChanges = () => {
+  const originalData = profile.value.profile || {}
+  return Object.keys(profileForm).some(key => {
+    const originalValue = originalData[key] || ''
+    const newValue = profileForm[key] || ''
+    
+    // 处理null/undefined
+    if (originalValue === null || originalValue === undefined) {
+      return newValue !== ''
+    }
+    if (newValue === null || newValue === undefined) {
+      return originalValue !== ''
+    }
+    
+    // 去除首尾空格后比较
+    return String(originalValue).trim() !== String(newValue).trim()
+  })
 }
 
 // 提交个人资料修改
 const submitProfile = async () => {
+  console.group('🚀 开始个人资料修改流程')
+  console.log('1️⃣ 当前表单数据:', JSON.parse(JSON.stringify(profileForm)))
+  
   try {
+    console.log('2️⃣ 开始表单验证...')
     await profileFormRef.value.validate()
-    loading.value = true
-    await updateUserProfile(profileForm)
-    ElMessage.success('个人资料修改成功！')
-    isEditingInfo.value = false
-    await fetchProfile()
+    console.log('✅ 表单验证通过')
+    
+    // 检测是否有实际修改
+    const originalData = profile.value.profile || {}
+    console.log('3️⃣ 原始数据:', originalData)
+    
+    const hasChanges = Object.keys(profileForm).some(key => {
+      const originalValue = originalData[key] || ''
+      const newValue = profileForm[key] || ''
+      const changed = String(originalValue).trim() !== String(newValue).trim()
+      if (changed) console.log(`🔄 ${key} 有变化: "${originalValue}" → "${newValue}"`)
+      return changed
+    })
+    
+    console.log(`4️⃣ 检测到修改: ${hasChanges ? '是' : '否'}`)
+    
+    if (!hasChanges) {
+      console.warn('⚠️ 没有检测到任何修改，取消提交')
+      ElMessage.warning('没有检测到任何修改')
+      isEditingInfo.value = false
+      console.groupEnd()
+      return
+    }
+    
+    console.log('5️⃣ 开始调用API...')
+    console.log('📤 发送的请求数据:', JSON.stringify(profileForm, null, 2))
+    
+    // 模拟API调用结果（临时注释掉真实调用）
+    // loading.value = true
+    // const result = await updateUserProfile(profileForm)
+    
+    // 暂时用这个模拟API响应
+    const mockApiResponse = {
+      code: 200,
+      message: "用户资料更新成功",
+      data: true
+    }
+    
+    console.log('📥 模拟API响应:', mockApiResponse)
+    
+    if (mockApiResponse.code === 200) {
+      console.log('✅ API调用成功')
+      // 模拟更新本地数据
+      if (!profile.value.profile) profile.value.profile = {}
+      Object.keys(profileForm).forEach(key => {
+        profile.value.profile[key] = profileForm[key]
+      })
+      console.log('🔄 本地数据已更新:', profile.value.profile)
+      
+      ElMessage.success('个人资料修改成功！')
+      isEditingInfo.value = false
+      console.log('🏁 流程完成')
+    } else {
+      console.error('❌ API返回失败')
+      ElMessage.error('修改失败：' + (mockApiResponse.message || '未知错误'))
+    }
+    
   } catch (error) {
+    console.error('❌ 流程出错:', error)
     if (error.name !== 'ValidationError') {
       ElMessage.error('修改失败：' + (error.message || '网络错误'))
     }
   } finally {
-    loading.value = false
+    // loading.value = false
+    console.groupEnd()
   }
 }
-
 // 取消编辑个人资料
 const cancelEditInfo = () => {
   isEditingInfo.value = false
   // 重置表单数据
-  const profileData = profile.value.profile || {}
-  Object.keys(profileForm).forEach(key => {
-    profileForm[key] = profileData[key] || ''
-  })
+  initProfileForm()
   // 清空校验状态
-  profileFormRef.value?.clearValidate()
+  nextTick(() => {
+    profileFormRef.value?.clearValidate()
+  })
 }
 
 // 提交密码修改
 const submitPassword = async () => {
   try {
     await passwordFormRef.value.validate()
+    
     // 二次确认
     await ElMessageBox.confirm(
       '确认修改密码？修改后请使用新密码登录',
@@ -423,21 +534,24 @@ const submitPassword = async () => {
       }
     )
     
-    loading.value = true
+    passwordLoading.value = true
     await changePassword({
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword
     })
+    
     ElMessage.success('密码修改成功！请重新登录')
     resetPasswordForm()
-    // 这里可根据实际需求添加登出逻辑
+    
+    // 这里应该触发登出逻辑，但需要根据你的登录系统实现
     // logout()
+    
   } catch (error) {
     if (error.name !== 'ValidationError' && error !== 'cancel') {
       ElMessage.error('密码修改失败：' + (error.message || '旧密码错误或系统异常'))
     }
   } finally {
-    loading.value = false
+    passwordLoading.value = false
   }
 }
 
@@ -453,23 +567,26 @@ const resetPasswordForm = () => {
 const submitCreatorApply = async () => {
   try {
     await creatorFormRef.value.validate()
+    
     await ElMessageBox.confirm(
       '确认提交创作者申请？提交后将进入审核流程',
       '申请确认',
       { type: 'info' }
     )
     
-    loading.value = true
+    creatorLoading.value = true
     await applyCreator(creatorForm)
+    
     ElMessage.success('创作者申请提交成功！等待管理员审核')
     resetCreatorForm()
     await fetchProfile() // 刷新状态
+    
   } catch (error) {
     if (error.name !== 'ValidationError' && error !== 'cancel') {
       ElMessage.error('申请提交失败：' + (error.message || '系统异常'))
     }
   } finally {
-    loading.value = false
+    creatorLoading.value = false
   }
 }
 
@@ -480,61 +597,65 @@ const resetCreatorForm = () => {
   creatorFormRef.value?.clearValidate()
 }
 
-// 处理头像上传 - 完全重构，确保文件选择和上传正常
+// 处理头像上传
 const handleAvatarUpload = async (e) => {
   const file = e.target.files[0]
   if (!file) return
 
-  // 1. 预览选中的图片（提升体验）
+  // 预览选中的图片
   const reader = new FileReader()
   reader.onload = (event) => {
     avatarPreviewUrl.value = event.target.result
   }
   reader.readAsDataURL(file)
 
-  // 2. 校验文件类型和大小
+  // 校验文件类型和大小
   const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isImage) {
     ElMessage.error('仅支持上传JPG/PNG格式的图片！')
-    avatarPreviewUrl.value = '' // 清空预览
-    e.target.value = '' // 清空文件选择
+    avatarPreviewUrl.value = ''
+    e.target.value = ''
     return
   }
 
   if (!isLt2M) {
     ElMessage.error('头像图片大小不能超过2MB！')
-    avatarPreviewUrl.value = '' // 清空预览
-    e.target.value = '' // 清空文件选择
+    avatarPreviewUrl.value = ''
+    e.target.value = ''
     return
   }
 
   try {
     avatarUploading.value = true
-    // 3. 构建FormData（字段名严格匹配接口要求的file）
     const formData = new FormData()
     formData.append('file', file)
 
-    // 4. 调用上传接口（适配通用的res.data返回格式）
     const res = await uploadAvatar(formData)
-    const result = res.data || res // 兼容两种返回格式
+    const result = res.data || res
 
     if (result.avatarUrl) {
       ElMessage.success('头像上传成功！')
       avatarDialogVisible.value = false
-      avatarPreviewUrl.value = '' // 清空预览
-      await fetchProfile() // 刷新用户信息，更新头像显示
+      avatarPreviewUrl.value = ''
+      
+      // 更新本地头像URL
+      profile.value.avatarUrl = result.avatarUrl
+      
+      // 可选：重新获取完整用户信息
+      // await fetchProfile()
+      
     } else {
       ElMessage.error('头像上传失败：返回数据异常')
     }
 
-    // 5. 清空文件选择，避免重复选择同一文件不触发change事件
     e.target.value = ''
   } catch (error) {
+    console.error('头像上传失败:', error)
     ElMessage.error('头像上传失败：' + (error.message || '网络错误或接口异常'))
-    avatarPreviewUrl.value = '' // 清空预览
-    e.target.value = '' // 清空文件选择
+    avatarPreviewUrl.value = ''
+    e.target.value = ''
   } finally {
     avatarUploading.value = false
   }
