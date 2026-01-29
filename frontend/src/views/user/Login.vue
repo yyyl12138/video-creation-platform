@@ -163,7 +163,7 @@ const handleSmsLogin = async () => {
     // ✅ 调用 API 函数
     const res = await loginBySms(smsForm.phone, smsForm.code)
     ElMessage.success('登录成功')
-    localStorage.setItem('token', res.token)
+    // token已在API函数中设置，无需重复设置
     router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
@@ -207,7 +207,7 @@ const handlePasswordLogin = async () => {
       localStorage.removeItem('rememberedLogin')
     }
 
-    localStorage.setItem('token', res.token)
+    // token已在API函数中设置，无需重复设置
     router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
