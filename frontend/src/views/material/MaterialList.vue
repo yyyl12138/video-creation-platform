@@ -213,8 +213,6 @@
       <div class="upload-area">
         <el-upload
           ref="uploadRef"
-          :action="uploadUrl"
-          :headers="uploadHeaders"
           :auto-upload="false"
           :multiple="true"
           :limit="20"
@@ -270,6 +268,7 @@ import {
   Plus, Search, Picture, VideoCamera, Headset, UploadFilled,
   Document, Delete, View, Grid, FolderOpened
 } from '@element-plus/icons-vue'
+import { getMaterials, uploadMaterial, deleteMaterial } from '@/api/user/material'
 
 const activeTab = ref('all')
 const searchKeyword = ref('')
@@ -284,6 +283,16 @@ const videoFilters = reactive({ keyword: '', resolution: '', duration: '', aiTag
 const audioFilters = reactive({ keyword: '', audioType: '', bitrate: '', aiTags: [] })
 const imageFilters = reactive({ keyword: '', imageType: '', dimension: '', color: '', aiTags: [] })
 
+// 仅做数据适配：将后端相对资源路径（如 /profile/upload/...）转换为可访问 URL
+// 开发环境 VITE_APP_BASE_API 通常是 http://localhost:8080/api/v1，需要去掉 /api/v1 前缀
+const normalizeMaterialUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  const apiBase = import.meta.env.VITE_APP_BASE_API || ''
+  const base = apiBase.replace(/\/api\/v1\/?$/, '')
+  return `${base}${url}`
+}
+
 const mockMaterials = [
   { id: 1, name: '产品宣传视频.mp4', type: 'video', size: 52428800, createTime: '2024-01-26T10:30:00', url: '' },
   { id: 2, name: '背景音乐配乐.mp3', type: 'audio', size: 8388608, createTime: '2024-01-25T14:20:00', url: '' },
@@ -291,8 +300,6 @@ const mockMaterials = [
   { id: 4, name: 'Logo动画.mp4', type: 'video', size: 15728640, createTime: '2024-01-23T16:45:00', url: '' },
 ]
 
-const uploadUrl = computed(() => `${import.meta.env.VITE_APP_BASE_API}/material/upload`)
-const uploadHeaders = computed(() => ({ Authorization: localStorage.getItem('token') }))
 
 const getTypeIcon = (type) => {
   const icons = { video: VideoCamera, audio: Headset, image: Picture }
@@ -335,17 +342,31 @@ const handleTabChange = () => loadMaterials()
 const loadMaterials = async () => {
   try {
     loading.value = true
-    setTimeout(() => {
-      let filtered = [...mockMaterials]
-      if (activeTab.value !== 'all') {
-        filtered = filtered.filter(item => item.type === activeTab.value)
-      }
-      materialList.value = filtered
-      loading.value = false
-    }, 300)
-  } catch (error) {
-    ElMessage.error('加载失败')
+    const type = activeTab.value === 'all' ? null : activeTab.value
+    const params = {
+      page: 1,
+      size: 100,
+      type: type,
+      keyword: searchKeyword.value
+    }
+    const res = await getMaterials(params)
+    if (res.code === 20000 && res.data) {
+      materialList.value = res.data.records.map(item => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        size: item.size,
+        createTime: item.createTime,
+        url: normalizeMaterialUrl(item.url)
+      }))
+    } else {
+      materialList.value = []
+    }
     loading.value = false
+  } catch (error) {
+    ElMessage.error('加载失败: ' + (error.message || '未知错误'))
+    loading.value = false
+    materialList.value = []
   }
 }
 
@@ -374,25 +395,63 @@ const submitUpload = async () => {
   }
   try {
     uploading.value = true
-    await new Promise(r => setTimeout(r, 1500))
-    ElMessage.success(`成功上传 ${uploadFileList.value.length} 个文件`)
-    showUploadDialog.value = false
-    clearUploadList()
-    loadMaterials()
+    let successCount = 0
+    let failCount = 0
+    
+    for (const file of uploadFileList.value) {
+      try {
+        const formData = new FormData()
+        formData.append('file', file.raw || file)
+        const res = await uploadMaterial(formData)
+        if (res.code === 20000) {
+          successCount++
+        } else {
+          failCount++
+          ElMessage.error(`文件 ${file.name} 上传失败: ${res.message || '未知错误'}`)
+        }
+      } catch (error) {
+        failCount++
+        ElMessage.error(`文件 ${file.name} 上传失败: ${error.message || '未知错误'}`)
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功上传 ${successCount} 个文件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+      showUploadDialog.value = false
+      clearUploadList()
+      loadMaterials()
+    } else {
+      ElMessage.error('所有文件上传失败')
+    }
   } catch (error) {
-    ElMessage.error('上传失败')
+    ElMessage.error('上传失败: ' + (error.message || '未知错误'))
   } finally {
     uploading.value = false
   }
 }
 
-const handlePreview = (material) => ElMessage.info(`预览: ${material.name}`)
+const handlePreview = (material) => {
+  if (material.url) {
+    window.open(material.url, '_blank')
+  } else {
+    ElMessage.info(`预览: ${material.name}`)
+  }
+}
 const handleDelete = async (material) => {
   try {
     await ElMessageBox.confirm(`确定删除 "${material.name}"？`, '确认', { type: 'warning' })
-    ElMessage.success('删除成功')
-    loadMaterials()
-  } catch {}
+    const res = await deleteMaterial(material.id, { type: material.type })
+    if (res.code === 20000) {
+      ElMessage.success('删除成功')
+      loadMaterials()
+    } else {
+      ElMessage.error('删除失败: ' + (res.message || '未知错误'))
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败: ' + (error.message || '未知错误'))
+    }
+  }
 }
 
 onMounted(() => loadMaterials())

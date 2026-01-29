@@ -34,10 +34,13 @@ export function uploadMaterial(data) {
 /**
  * 删除素材
  * @param {string|number} id - 素材ID
+ * @param {Object} params - 额外参数
+ * @param {string} params.type - 素材类型 (image/video/audio)
  */
-export function deleteMaterial(id) {
+export function deleteMaterial(id, params = {}) {
   return request({
     url: `/material/delete/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params
   })
 }
