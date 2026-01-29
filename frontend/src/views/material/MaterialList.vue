@@ -333,7 +333,20 @@ const imageFilters = reactive({ keyword: '', imageType: '', dimension: '', color
 const normalizeMaterialUrl = (url) => {
   if (!url) return ''
   if (/^https?:\/\//i.test(url)) return url
+
+  // 兼容两种开发方式：
+  // 1) VITE_APP_BASE_API = '/api/v1'（走 vite proxy 到后端）
+  // 2) VITE_APP_BASE_API = 'http://localhost:8080/api/v1'（直连后端）
   const apiBase = import.meta.env.VITE_APP_BASE_API || ''
+
+  // 走代理（相对路径）时：
+  // - API 走 /api 前缀
+  // - 静态资源本身走 /profile 前缀（由 vite proxy '/profile' 转发到后端）
+  if (apiBase.startsWith('/api')) {
+    return url
+  }
+
+  // 直连后端时，去掉 /api/v1 前缀，静态资源挂在根路径（/profile/upload/**）
   const base = apiBase.replace(/\/api\/v1\/?$/, '')
   return `${base}${url}`
 }
@@ -391,17 +404,16 @@ const loadMaterials = async () => {
     const params = {
       page: page.value,
       size: pageSize.value,
-      type: type,
-      keyword: getCurrentKeyword()
+      type: type ? type.toUpperCase() : undefined
     }
     const res = await getMaterials(params)
     if (res.code === 20000 && res.data) {
       total.value = res.data.total || 0
-      materialList.value = res.data.records.map(item => ({
-        id: item.id,
+      materialList.value = (res.data.records || []).map(item => ({
+        id: item.materialId,
         name: item.name,
-        type: item.type,
-        size: item.size,
+        type: (item.type || '').toLowerCase(),
+        size: item.fileSize,
         createTime: item.createTime,
         url: normalizeMaterialUrl(item.url)
       }))
@@ -457,28 +469,48 @@ const submitUpload = async () => {
     uploading.value = true
     let successCount = 0
     let failCount = 0
-    
+
+    const uploadedMaterials = []
+
     for (const file of uploadFileList.value) {
       try {
         const formData = new FormData()
-        formData.append('file', file.raw || file)
+        const rawFile = file.raw || file
+        formData.append('file', rawFile)
+        formData.append('name', rawFile.name)
+
         const res = await uploadMaterial(formData)
-        if (res.code === 20000) {
+        if (res.code === 20000 && res.data) {
           successCount++
+          uploadedMaterials.push({
+            id: res.data.materialId,
+            name: rawFile.name,
+            type: (res.data.type || '').toLowerCase(),
+            size: res.data.fileSize,
+            createTime: new Date().toISOString(),
+            url: normalizeMaterialUrl(res.data.url)
+          })
         } else {
           failCount++
-          ElMessage.error(`文件 ${file.name} 上传失败: ${res.message || '未知错误'}`)
+          ElMessage.error(`文件 ${rawFile.name} 上传失败: ${res.message || '未知错误'}`)
         }
       } catch (error) {
         failCount++
         ElMessage.error(`文件 ${file.name} 上传失败: ${error.message || '未知错误'}`)
       }
     }
-    
+
     if (successCount > 0) {
       ElMessage.success(`成功上传 ${successCount} 个文件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+
+      // 立刻在列表里显示（无需等待重新拉取接口）
+      materialList.value = [...uploadedMaterials, ...materialList.value]
+      total.value = (total.value || 0) + uploadedMaterials.length
+
       showUploadDialog.value = false
       clearUploadList()
+
+      // 后台刷新一次，确保时间/名称等信息与后端一致
       loadMaterials()
     } else {
       ElMessage.error('所有文件上传失败')
@@ -503,10 +535,12 @@ const openInNewTab = (url) => window.open(url, '_blank')
 const handleDelete = async (material) => {
   try {
     await ElMessageBox.confirm(`确定删除 "${material.name}"？`, '确认', { type: 'warning' })
-    const res = await deleteMaterial(material.id, { type: material.type })
+    const res = await deleteMaterial(material.id, { type: (material.type || '').toUpperCase() })
     if (res.code === 20000) {
       ElMessage.success('删除成功')
-      loadMaterials()
+      // 立即从当前列表移除
+      materialList.value = materialList.value.filter(m => m.id !== material.id)
+      total.value = Math.max(0, (total.value || 0) - 1)
     } else {
       ElMessage.error('删除失败: ' + (res.message || '未知错误'))
     }

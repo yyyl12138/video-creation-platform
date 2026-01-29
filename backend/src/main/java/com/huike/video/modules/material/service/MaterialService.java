@@ -41,4 +41,19 @@ public interface MaterialService {
      * @param type 素材类型
      */
     boolean deleteMaterial(String materialId, String type);
+
+    /**
+     * 上传素材
+     * @param file MultipartFile
+     * @param name 素材名称
+     * @param tags 标签，逗号分隔，可为空
+     * @param isPublic 是否公开
+     * @param category 分类，可为空
+     */
+    com.huike.video.modules.material.vo.MaterialUploadResponse uploadMaterial(org.springframework.web.multipart.MultipartFile file,
+                                                        String name,
+                                                        String tags,
+                                                        Boolean isPublic,
+                                                        String category);
+
 }

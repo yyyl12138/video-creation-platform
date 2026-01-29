@@ -10,7 +10,7 @@ spring:
     # [TODO] 队友请修改: 你的本地数据库账号
     username: root
     # [TODO] 队友请修改: 你的本地数据库密码
-    password: password
+    password: 123456
 
   # Redis Configuration
   data:
@@ -25,8 +25,8 @@ spring:
   # File Upload Configuration (Custom)
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 500MB
+      max-request-size: 500MB
 
 # MyBatis Plus Configuration
 mybatis-plus:
@@ -62,7 +62,7 @@ knife4j:
 # Custom File Path Config
 file:
   # [TODO] 队友请修改: [重要] 必须改为你电脑上的本地绝对路径！用于存储上传的文件
-  upload-path: /Users/yangli/Documents/自动化短视频创作平台/storage/
+  upload-path: G:/ShiXi/xiangmu/upload
 
 # 短信服务开发配置信息
   sms:

@@ -37,7 +37,13 @@ public class MaterialFileUtils {
         String fileName = UUID.randomUUID().toString() + "." + fileExtension;
         
         String relativePath = "materials" + File.separator + materialType + File.separator + dateDir;
-        String fullPath = uploadBasePath + relativePath;
+
+        // uploadBasePath 可能不以分隔符结尾，这里做一次归一化，避免拼接出错误路径
+        String basePath = uploadBasePath;
+        if (basePath != null && !basePath.endsWith(File.separator) && !basePath.endsWith("/")) {
+            basePath = basePath + File.separator;
+        }
+        String fullPath = basePath + relativePath;
         
         // 创建目录
         Path dirPath = Paths.get(fullPath);
@@ -99,7 +105,13 @@ public class MaterialFileUtils {
             // filePath 是相对路径，需要转换为绝对路径
             // filePath格式: /profile/upload/materials/image/20260128/uuid.jpg
             String relativePath = filePath.replace("/profile/upload/", "").replace("/", File.separator);
-            String absolutePath = uploadBasePath + relativePath;
+
+            String basePath = uploadBasePath;
+            if (basePath != null && !basePath.endsWith(File.separator) && !basePath.endsWith("/")) {
+                basePath = basePath + File.separator;
+            }
+
+            String absolutePath = basePath + relativePath;
             Path path = Paths.get(absolutePath);
             if (Files.exists(path)) {
                 Files.delete(path);

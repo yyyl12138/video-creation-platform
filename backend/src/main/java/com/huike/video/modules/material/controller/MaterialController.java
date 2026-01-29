@@ -73,7 +73,18 @@ public class MaterialController {
         return success ? Result.success(null) : Result.error(20002, "删除失败");
     }
 
-    // TODO: 3.4 用户上传素材 (需要文件上传处理)
-    // @PostMapping
-    // public Result<MaterialUploadResponse> uploadMaterial(...) { }
+    /**
+     * 3.4 用户上传素材
+     * POST /api/v1/materials
+     */
+    @PostMapping(consumes = "multipart/form-data")
+    public Result<com.huike.video.modules.material.vo.MaterialUploadResponse> uploadMaterial(
+            @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "tags", required = false) String tags,
+            @RequestParam(value = "isPublic", required = false) Boolean isPublic,
+            @RequestParam(value = "category", required = false) String category) {
+        com.huike.video.modules.material.vo.MaterialUploadResponse resp = materialService.uploadMaterial(file, name, tags, isPublic, category);
+        return Result.success(resp);
+    }
 }

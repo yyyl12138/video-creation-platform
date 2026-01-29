@@ -3,7 +3,7 @@ package com.huike.video.modules.admin.entity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.huike.video.common.entity.BaseEntity;
+import com.huike.video.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

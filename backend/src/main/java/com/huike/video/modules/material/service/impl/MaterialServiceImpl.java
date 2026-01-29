@@ -1,5 +1,6 @@
 package com.huike.video.modules.material.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -31,6 +32,7 @@ public class MaterialServiceImpl implements MaterialService {
     private final ImageMaterialMapper imageMaterialMapper;
     private final VideoMaterialMapper videoMaterialMapper;
     private final AudioMaterialMapper audioMaterialMapper;
+    private final com.huike.video.modules.material.util.MaterialFileUtils materialFileUtils;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -146,15 +148,126 @@ public class MaterialServiceImpl implements MaterialService {
             return false;
         }
 
-        switch (type.toUpperCase()) {
-            case "IMAGE":
-                return imageMaterialMapper.deleteById(materialId) > 0;
-            case "VIDEO":
-                return videoMaterialMapper.deleteById(materialId) > 0;
-            case "AUDIO":
-                return audioMaterialMapper.deleteById(materialId) > 0;
+        String upperType = type.toUpperCase();
+        String filePath = null;
+        int rows = 0;
+
+        switch (upperType) {
+            case "IMAGE": {
+                ImageMaterial image = imageMaterialMapper.selectById(materialId);
+                if (image != null) {
+                    filePath = image.getFilePath();
+                }
+                rows = imageMaterialMapper.deleteById(materialId);
+                break;
+            }
+            case "VIDEO": {
+                VideoMaterial video = videoMaterialMapper.selectById(materialId);
+                if (video != null) {
+                    filePath = video.getFilePath();
+                }
+                rows = videoMaterialMapper.deleteById(materialId);
+                break;
+            }
+            case "AUDIO": {
+                AudioMaterial audio = audioMaterialMapper.selectById(materialId);
+                if (audio != null) {
+                    filePath = audio.getFilePath();
+                }
+                rows = audioMaterialMapper.deleteById(materialId);
+                break;
+            }
             default:
                 return false;
+        }
+
+        if (rows <= 0) {
+            return false;
+        }
+
+        if (StringUtils.hasText(filePath)) {
+            materialFileUtils.deleteFile(filePath);
+        }
+
+        return true;
+    }
+
+    @Override
+    public com.huike.video.modules.material.vo.MaterialUploadResponse uploadMaterial(org.springframework.web.multipart.MultipartFile file,
+                                                                     String name,
+                                                                     String tags,
+                                                                     Boolean isPublic,
+                                                                     String category) {
+        com.huike.video.modules.material.vo.MaterialUploadResponse resp = new com.huike.video.modules.material.vo.MaterialUploadResponse();
+        try {
+            // 根据文件扩展名判断素材类型
+            String materialType = materialFileUtils.detectMaterialType(file.getOriginalFilename());
+            if ("unknown".equals(materialType)) {
+                throw new IllegalArgumentException("不支持的素材类型");
+            }
+            // 保存文件，返回访问URL
+            String url = materialFileUtils.saveFile(file, materialType);
+
+            String id = IdUtil.simpleUUID();
+            long size = file.getSize();
+
+            String uploaderId = null;
+            try {
+                uploaderId = StpUtil.getLoginIdAsString();
+            } catch (Exception ignored) {
+            }
+            if (!StringUtils.hasText(uploaderId)) {
+                uploaderId = "unknown";
+            }
+
+            switch (materialType) {
+                case "image":
+                    ImageMaterial img = new ImageMaterial();
+                    img.setId(id);
+                    img.setImageName(name != null ? name : file.getOriginalFilename());
+                    img.setFilePath(url);
+                    img.setFileSize(size);
+                    img.setTags(tags);
+                    img.setIsPublic(isPublic != null && isPublic);
+                    img.setCategory(category);
+                    img.setStatus(1);
+                    img.setSourceType(2); // 用户上传
+                    img.setUploaderId(uploaderId);
+                    imageMaterialMapper.insert(img);
+                    break;
+                case "video":
+                    VideoMaterial vid = new VideoMaterial();
+                    vid.setId(id);
+                    vid.setVideoName(name != null ? name : file.getOriginalFilename());
+                    vid.setFilePath(url);
+                    vid.setFileSize(size);
+                    vid.setTags(tags);
+                    vid.setIsPublic(isPublic != null && isPublic);
+                    vid.setStatus(1);
+                    vid.setSourceType(2);
+                    vid.setUploaderId(uploaderId);
+                    videoMaterialMapper.insert(vid);
+                    break;
+                case "audio":
+                    AudioMaterial aud = new AudioMaterial();
+                    aud.setId(id);
+                    aud.setAudioName(name != null ? name : file.getOriginalFilename());
+                    aud.setFilePath(url);
+                    aud.setFileSize(size);
+                    aud.setTags(tags);
+                    aud.setStatus(1);
+                    aud.setUploaderId(uploaderId);
+                    audioMaterialMapper.insert(aud);
+                    break;
+            }
+
+            resp.setMaterialId(id);
+            resp.setUrl(url);
+            resp.setType(materialType.toUpperCase());
+            resp.setFileSize(size);
+            return resp;
+        } catch (Exception e) {
+            throw new com.huike.video.common.exception.BusinessException(50000, "素材上传失败: " + e.getMessage());
         }
     }
 

@@ -10,7 +10,7 @@ import request from '@/utils/request'
  */
 export function getMaterials(params) {
   return request({
-    url: '/material/list',
+    url: '/materials',
     method: 'get',
     params
   })
@@ -22,7 +22,7 @@ export function getMaterials(params) {
  */
 export function uploadMaterial(data) {
   return request({
-    url: '/material/upload',
+    url: '/materials',
     method: 'post',
     data,
     headers: {
@@ -35,11 +35,11 @@ export function uploadMaterial(data) {
  * 删除素材
  * @param {string|number} id - 素材ID
  * @param {Object} params - 额外参数
- * @param {string} params.type - 素材类型 (image/video/audio)
+ * @param {string} params.type - 素材类型 (IMAGE/VIDEO/AUDIO)
  */
 export function deleteMaterial(id, params = {}) {
   return request({
-    url: `/material/delete/${id}`,
+    url: `/materials/${id}`,
     method: 'delete',
     params
   })
