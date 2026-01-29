@@ -200,6 +200,19 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <div v-if="materialList.length > 0" class="pagination-bar">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @current-change="loadMaterials"
+            @size-change="handlePageSizeChange"
+          />
+        </div>
       </div>
     </el-card>
 
@@ -258,6 +271,32 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 预览对话框 -->
+    <el-dialog v-model="showPreviewDialog" title="素材预览" width="800px">
+      <div v-if="previewMaterial" class="preview-dialog-body">
+        <template v-if="previewMaterial.type === 'image'">
+          <img class="preview-image" :src="previewMaterial.url" :alt="previewMaterial.name" />
+        </template>
+        <template v-else-if="previewMaterial.type === 'video'">
+          <video class="preview-video" :src="previewMaterial.url" controls />
+        </template>
+        <template v-else-if="previewMaterial.type === 'audio'">
+          <audio class="preview-audio" :src="previewMaterial.url" controls />
+        </template>
+
+        <div class="preview-meta">
+          <div><strong>名称：</strong>{{ previewMaterial.name }}</div>
+          <div><strong>类型：</strong>{{ getTypeLabel(previewMaterial.type) }}</div>
+          <div><strong>大小：</strong>{{ formatFileSize(previewMaterial.size) }}</div>
+          <div><strong>上传时间：</strong>{{ formatDate(previewMaterial.createTime) }}</div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showPreviewDialog = false">关闭</el-button>
+        <el-button v-if="previewMaterial?.url" type="primary" @click="openInNewTab(previewMaterial.url)">新窗口打开</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -278,6 +317,12 @@ const uploading = ref(false)
 const uploadRef = ref(null)
 const uploadFileList = ref([])
 const materialList = ref([])
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+const showPreviewDialog = ref(false)
+const previewMaterial = ref(null)
 
 const videoFilters = reactive({ keyword: '', resolution: '', duration: '', aiTags: [] })
 const audioFilters = reactive({ keyword: '', audioType: '', bitrate: '', aiTags: [] })
@@ -344,13 +389,14 @@ const loadMaterials = async () => {
     loading.value = true
     const type = activeTab.value === 'all' ? null : activeTab.value
     const params = {
-      page: 1,
-      size: 100,
+      page: page.value,
+      size: pageSize.value,
       type: type,
-      keyword: searchKeyword.value
+      keyword: getCurrentKeyword()
     }
     const res = await getMaterials(params)
     if (res.code === 20000 && res.data) {
+      total.value = res.data.total || 0
       materialList.value = res.data.records.map(item => ({
         id: item.id,
         name: item.name,
@@ -361,13 +407,27 @@ const loadMaterials = async () => {
       }))
     } else {
       materialList.value = []
+      total.value = 0
     }
     loading.value = false
   } catch (error) {
     ElMessage.error('加载失败: ' + (error.message || '未知错误'))
     loading.value = false
     materialList.value = []
+    total.value = 0
   }
+}
+
+const getCurrentKeyword = () => {
+  if (activeTab.value === 'video') return videoFilters.keyword || ''
+  if (activeTab.value === 'audio') return audioFilters.keyword || ''
+  if (activeTab.value === 'image') return imageFilters.keyword || ''
+  return searchKeyword.value || ''
+}
+
+const handlePageSizeChange = () => {
+  page.value = 1
+  loadMaterials()
 }
 
 const handleFileChange = (file) => {
@@ -431,12 +491,15 @@ const submitUpload = async () => {
 }
 
 const handlePreview = (material) => {
-  if (material.url) {
-    window.open(material.url, '_blank')
-  } else {
-    ElMessage.info(`预览: ${material.name}`)
+  if (!material?.url) {
+    ElMessage.info('该素材暂无可访问链接')
+    return
   }
+  previewMaterial.value = material
+  showPreviewDialog.value = true
 }
+
+const openInNewTab = (url) => window.open(url, '_blank')
 const handleDelete = async (material) => {
   try {
     await ElMessageBox.confirm(`确定删除 "${material.name}"？`, '确认', { type: 'warning' })
@@ -584,6 +647,42 @@ onMounted(() => loadMaterials())
 
 .material-list {
   padding: 0 16px 16px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 8px;
+}
+
+.preview-dialog-body {
+  display: grid;
+  gap: 16px;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  background: #0b0f19;
+  border-radius: 10px;
+}
+
+.preview-video {
+  width: 100%;
+  max-height: 520px;
+  background: #0b0f19;
+  border-radius: 10px;
+}
+
+.preview-audio {
+  width: 100%;
+}
+
+.preview-meta {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.8;
 }
 
 .empty-state {

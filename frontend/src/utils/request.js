@@ -83,7 +83,8 @@ service.interceptors.response.use(
     response => {
         const res = response.data
         // Custom Code Check
-        if (res.code && res.code !== 200) {
+        // 后端统一返回：成功 code=20000
+        if (res.code && res.code !== 20000) {
             if (res.code === 401) {
                 // Token过期，尝试刷新
                 const originalRequest = response.config
