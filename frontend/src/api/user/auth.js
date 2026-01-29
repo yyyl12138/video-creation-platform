@@ -5,9 +5,9 @@ import request from '@/utils/request'
  * @param {string} target - 目标手机号或邮箱
  * @param {string} type - 验证码类型 (login/register/reset)
  */
-export function sendAuthCode(target, type = 'login') {
+export function sendAuthCode(target, type = 'REGISTER') {
   return request({
-    url: '/auth/send-code',
+    url: '/auth/verification-code',
     method: 'post',
     data: { target, type }
   })
@@ -87,7 +87,7 @@ export function registerUser(userData) {
  */
 export function resetPassword(data) {
   return request({
-    url: '/auth/reset-password',
+    url: '/auth/password/reset',
     method: 'post',
     data
   })

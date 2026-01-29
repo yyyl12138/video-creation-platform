@@ -1,84 +1,79 @@
 package com.huike.video.modules.material.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huike.video.common.result.Result;
-import com.huike.video.modules.material.dto.MaterialUploadResponse;
 import com.huike.video.modules.material.service.MaterialService;
+import com.huike.video.modules.material.vo.MaterialBatchDeleteRequest;
+import com.huike.video.modules.material.vo.MaterialBatchDeleteResponse;
 import com.huike.video.modules.material.vo.MaterialVO;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 素材管理控制器
+ * 素材管理控制器 - 符合 API 文档规范 3.1-3.4
+ * 使用统一路径 + type 参数区分素材类型
  */
-@Tag(name = "素材管理", description = "素材上传、查询、删除接口")
 @RestController
-@RequestMapping("/api/v1/material")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/materials")
 public class MaterialController {
 
     private final MaterialService materialService;
 
     /**
-     * 上传素材
-     * 兼容前端路径：/material/upload 和 /api/v1/material/upload
+     * 3.2 获取素材列表
+     * GET /api/v1/materials
      */
-    @Operation(summary = "上传素材", description = "支持图片、视频、音频文件上传")
-    @PostMapping("/upload")
-    public Result<MaterialUploadResponse> uploadMaterial(@RequestParam("file") MultipartFile file) {
-        String userId = getCurrentUserId();
-        MaterialUploadResponse response = materialService.uploadMaterial(file, userId);
+    @GetMapping
+    public Result<Page<MaterialVO>> listMaterials(
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "20") Integer size,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "isSystem", required = false) Boolean isSystem) {
+        return Result.success(materialService.listMaterials(page, size, type, isSystem));
+    }
+
+    /**
+     * 3.1 获取素材详情
+     * GET /api/v1/materials/{materialId}?type=IMAGE
+     */
+    @GetMapping("/{materialId}")
+    public Result<MaterialVO> getMaterial(
+            @PathVariable String materialId,
+            @RequestParam("type") String type) {
+        MaterialVO material = materialService.getMaterialById(materialId, type);
+        if (material == null) {
+            return Result.error(20001, "素材不存在");
+        }
+        return Result.success(material);
+    }
+
+    /**
+     * 3.3 批量删除素材
+     * DELETE /api/v1/materials/batch
+     */
+    @DeleteMapping("/batch")
+    public Result<MaterialBatchDeleteResponse> batchDelete(@RequestBody MaterialBatchDeleteRequest request) {
+        MaterialBatchDeleteResponse response = materialService.batchDelete(
+                request.getMaterialIds(), 
+                request.getType()
+        );
         return Result.success(response);
     }
 
     /**
-     * 获取素材列表
+     * 删除单个素材 (扩展接口)
+     * DELETE /api/v1/materials/{materialId}?type=IMAGE
      */
-    @Operation(summary = "获取素材列表", description = "分页查询用户的素材列表")
-    @GetMapping("/list")
-    public Result<Page<MaterialVO>> getMaterialList(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String keyword) {
-        String userId = getCurrentUserId();
-        Page<MaterialVO> result = materialService.getMaterialList(page, size, type, keyword, userId);
-        return Result.success(result);
+    @DeleteMapping("/{materialId}")
+    public Result<Void> deleteMaterial(
+            @PathVariable String materialId,
+            @RequestParam("type") String type) {
+        boolean success = materialService.deleteMaterial(materialId, type);
+        return success ? Result.success(null) : Result.error(20002, "删除失败");
     }
 
-    /**
-     * 删除素材
-     */
-    @Operation(summary = "删除素材", description = "删除指定的素材")
-    @DeleteMapping("/delete/{id}")
-    public Result<Boolean> deleteMaterial(
-            @PathVariable String id,
-            @RequestParam(required = false) String type) {
-        String userId = getCurrentUserId();
-        // 如果type为空，尝试从数据库查询获取
-        if (type == null || type.isEmpty()) {
-            // 这里可以优化：先查询再删除，或者要求前端必须传type
-            throw new com.huike.video.common.exception.BusinessException(20001, "素材类型不能为空");
-        }
-        boolean success = materialService.deleteMaterial(id, type, userId);
-        return Result.success(success);
-    }
-
-    /**
-     * 临时获取当前用户 ID：
-     * - 若已登录，则使用 Sa-Token 中的登录用户
-     * - 若未登录，则使用固定测试用户 ID，便于前端无账号本地调试
-     *
-     * TODO 恢复登录校验时，可改为强制要求登录（直接调用 StpUtil.getLoginIdAsString()）
-     */
-    private String getCurrentUserId() {
-        if (StpUtil.isLogin()) {
-            return StpUtil.getLoginIdAsString();
-        }
-        return "test-user";
-    }
+    // TODO: 3.4 用户上传素材 (需要文件上传处理)
+    // @PostMapping
+    // public Result<MaterialUploadResponse> uploadMaterial(...) { }
 }

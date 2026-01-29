@@ -3,8 +3,6 @@ package com.huike.video.modules.material.service.impl;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.huike.video.common.exception.BusinessException;
-import com.huike.video.modules.material.dto.MaterialUploadResponse;
 import com.huike.video.modules.material.entity.AudioMaterial;
 import com.huike.video.modules.material.entity.ImageMaterial;
 import com.huike.video.modules.material.entity.VideoMaterial;
@@ -12,21 +10,20 @@ import com.huike.video.modules.material.mapper.AudioMaterialMapper;
 import com.huike.video.modules.material.mapper.ImageMaterialMapper;
 import com.huike.video.modules.material.mapper.VideoMaterialMapper;
 import com.huike.video.modules.material.service.MaterialService;
-import com.huike.video.modules.material.util.MaterialFileUtils;
+import com.huike.video.modules.material.vo.MaterialBatchDeleteResponse;
 import com.huike.video.modules.material.vo.MaterialVO;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
+/**
+ * 素材服务实现 - 符合 API 文档规范
+ */
 @Service
 @RequiredArgsConstructor
 public class MaterialServiceImpl implements MaterialService {
@@ -34,362 +31,212 @@ public class MaterialServiceImpl implements MaterialService {
     private final ImageMaterialMapper imageMaterialMapper;
     private final VideoMaterialMapper videoMaterialMapper;
     private final AudioMaterialMapper audioMaterialMapper;
-    private final MaterialFileUtils materialFileUtils;
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
-    @Transactional
-    public MaterialUploadResponse uploadMaterial(MultipartFile file, String userId) {
-        // 1. 验证文件
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException(20001, "文件不能为空");
+    public MaterialVO getMaterialById(String materialId, String type) {
+        if (!StringUtils.hasText(type)) {
+            return null;
         }
-
-        // 2. 验证文件大小（500MB限制）
-        long maxSize = 500 * 1024 * 1024L;
-        if (file.getSize() > maxSize) {
-            throw new BusinessException(20001, "文件大小不能超过500MB");
-        }
-
-        // 3. 检测素材类型
-        String materialType = materialFileUtils.detectMaterialType(file.getOriginalFilename());
-        if ("unknown".equals(materialType)) {
-            throw new BusinessException(20001, "不支持的文件格式");
-        }
-
-        try {
-            // 4. 保存文件
-            String filePath = materialFileUtils.saveFile(file, materialType);
-            String originalFilename = file.getOriginalFilename();
-            String materialId = generateMaterialId(materialType);
-
-            // 5. 保存到数据库
-            if ("image".equals(materialType)) {
-                ImageMaterial imageMaterial = new ImageMaterial();
-                imageMaterial.setId(materialId);
-                imageMaterial.setImageName(originalFilename);
-                imageMaterial.setFilePath(filePath);
-                imageMaterial.setFileSize(file.getSize());
-                imageMaterial.setFormat(getFileExtension(originalFilename));
-                imageMaterial.setUploaderId(userId);
-                imageMaterial.setStatus(1); // 正常
-                imageMaterial.setCopyrightStatus(3); // 个人使用
-                imageMaterial.setSourceType(2); // 用户上传
-                imageMaterial.setIsPublic(false);
-                imageMaterialMapper.insert(imageMaterial);
-            } else if ("video".equals(materialType)) {
-                VideoMaterial videoMaterial = new VideoMaterial();
-                videoMaterial.setId(materialId);
-                videoMaterial.setVideoName(originalFilename);
-                videoMaterial.setFilePath(filePath);
-                videoMaterial.setFileSize(file.getSize());
-                videoMaterial.setFormat(getFileExtension(originalFilename));
-                videoMaterial.setUploaderId(userId);
-                videoMaterial.setStatus(1);
-                videoMaterial.setCopyrightStatus(3);
-                videoMaterial.setSourceType(2);
-                videoMaterial.setIsPublic(false);
-                videoMaterialMapper.insert(videoMaterial);
-            } else if ("audio".equals(materialType)) {
-                AudioMaterial audioMaterial = new AudioMaterial();
-                audioMaterial.setId(materialId);
-                audioMaterial.setAudioName(originalFilename);
-                audioMaterial.setFilePath(filePath);
-                audioMaterial.setFileSize(file.getSize());
-                audioMaterial.setUploaderId(userId);
-                audioMaterial.setStatus(1);
-                audioMaterial.setCopyrightStatus(3);
-                audioMaterialMapper.insert(audioMaterial);
-            }
-
-            // 6. 构建响应
-            MaterialUploadResponse response = new MaterialUploadResponse();
-            response.setMaterialId(materialId);
-            response.setUrl(filePath);
-            response.setType(materialType);
-            response.setFileSize(file.getSize());
-            response.setName(originalFilename);
-
-            log.info("素材上传成功: materialId={}, type={}, userId={}", materialId, materialType, userId);
-            return response;
-
-        } catch (Exception e) {
-            log.error("素材上传失败", e);
-            throw new BusinessException(20001, "上传失败: " + e.getMessage());
+        
+        switch (type.toUpperCase()) {
+            case "IMAGE":
+                ImageMaterial image = imageMaterialMapper.selectById(materialId);
+                return image != null ? convertToVO(image) : null;
+            case "VIDEO":
+                VideoMaterial video = videoMaterialMapper.selectById(materialId);
+                return video != null ? convertToVO(video) : null;
+            case "AUDIO":
+                AudioMaterial audio = audioMaterialMapper.selectById(materialId);
+                return audio != null ? convertToVO(audio) : null;
+            default:
+                return null;
         }
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<MaterialVO> getMaterialList(Integer page, Integer size, String type, String keyword, String userId) {
-        Page<MaterialVO> resultPage = new Page<>(page, size);
+    public Page<MaterialVO> listMaterials(Integer page, Integer size, String type, Boolean isSystem) {
+        int pageNum = page != null ? page : 1;
+        int pageSize = Math.min(size != null ? size : 20, 100); // 限制最大100
 
-        // 根据类型查询不同的表
+        Page<MaterialVO> resultPage = new Page<>(pageNum, pageSize);
+
+        // 如果指定了类型，只查询该类型
         if (StringUtils.hasText(type)) {
-            if ("image".equals(type)) {
-                return getImageMaterialList(resultPage, keyword, userId);
-            } else if ("video".equals(type)) {
-                return getVideoMaterialList(resultPage, keyword, userId);
-            } else if ("audio".equals(type)) {
-                return getAudioMaterialList(resultPage, keyword, userId);
-            } else {
-                // 非法类型：返回空页（避免前端误解为“只有图片”）
-                resultPage.setRecords(List.of());
-                resultPage.setTotal(0);
-                return resultPage;
-            }
+            return queryByType(type.toUpperCase(), pageNum, pageSize, isSystem);
         }
 
-        // 未指定类型：聚合 image/video/audio 三种素材，按 createTime 倒序合并分页
-        return getAllMaterialList(resultPage, keyword, userId);
+        // 未指定类型，合并查询所有类型 (简化实现: 先查图片)
+        return queryByType("IMAGE", pageNum, pageSize, isSystem);
     }
 
-    private Page<MaterialVO> getAllMaterialList(Page<MaterialVO> page, String keyword, String userId) {
-        long fetchSize = page.getCurrent() * page.getSize(); // 为了正确切页，先拉取前 N 条再做内存分页
+    private Page<MaterialVO> queryByType(String type, int pageNum, int pageSize, Boolean isSystem) {
+        Page<MaterialVO> resultPage = new Page<>(pageNum, pageSize);
 
-        // 1) 拉取三类素材各自前 fetchSize 条（按 createdAt 倒序）
-        Page<ImageMaterial> imagePage = selectImageMaterials(fetchSize, keyword, userId);
-        Page<VideoMaterial> videoPage = selectVideoMaterials(fetchSize, keyword, userId);
-        Page<AudioMaterial> audioPage = selectAudioMaterials(fetchSize, keyword, userId);
+        switch (type) {
+            case "IMAGE":
+                Page<ImageMaterial> imagePage = new Page<>(pageNum, pageSize);
+                LambdaQueryWrapper<ImageMaterial> imageWrapper = new LambdaQueryWrapper<>();
+                imageWrapper.eq(ImageMaterial::getStatus, 1);
+                if (isSystem != null) {
+                    imageWrapper.eq(ImageMaterial::getSourceType, isSystem ? 1 : 2);
+                }
+                imageWrapper.orderByDesc(ImageMaterial::getCreatedAt);
+                imageMaterialMapper.selectPage(imagePage, imageWrapper);
+                
+                resultPage.setRecords(imagePage.getRecords().stream()
+                        .map(this::convertToVO).collect(Collectors.toList()));
+                resultPage.setTotal(imagePage.getTotal());
+                break;
 
-        // 2) 映射为统一 VO
-        List<MaterialVO> merged = new ArrayList<>(
-                imagePage.getRecords().size() + videoPage.getRecords().size() + audioPage.getRecords().size()
-        );
+            case "VIDEO":
+                Page<VideoMaterial> videoPage = new Page<>(pageNum, pageSize);
+                LambdaQueryWrapper<VideoMaterial> videoWrapper = new LambdaQueryWrapper<>();
+                videoWrapper.eq(VideoMaterial::getStatus, 1);
+                if (isSystem != null) {
+                    videoWrapper.eq(VideoMaterial::getSourceType, isSystem ? 1 : 2);
+                }
+                videoWrapper.orderByDesc(VideoMaterial::getCreatedAt);
+                videoMaterialMapper.selectPage(videoPage, videoWrapper);
+                
+                resultPage.setRecords(videoPage.getRecords().stream()
+                        .map(this::convertToVO).collect(Collectors.toList()));
+                resultPage.setTotal(videoPage.getTotal());
+                break;
 
-        merged.addAll(imagePage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getImageName());
-            vo.setType("image");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setResolution(material.getResolution());
-            vo.setFormat(material.getFormat());
-            return vo;
-        }).collect(Collectors.toList()));
-
-        merged.addAll(videoPage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getVideoName());
-            vo.setType("video");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setResolution(material.getResolution());
-            vo.setDurationSeconds(material.getDurationSeconds());
-            vo.setFormat(material.getFormat());
-            return vo;
-        }).collect(Collectors.toList()));
-
-        merged.addAll(audioPage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getAudioName());
-            vo.setType("audio");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setDurationSeconds(material.getDurationSeconds());
-            return vo;
-        }).collect(Collectors.toList()));
-
-        // 3) 合并排序（createTime desc），再按 page/current/size 做内存切片
-        merged.sort(Comparator.comparing(MaterialVO::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
-        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
-        int toIndex = (int) Math.min(page.getCurrent() * page.getSize(), merged.size());
-
-        List<MaterialVO> pageRecords;
-        if (fromIndex >= merged.size()) {
-            pageRecords = List.of();
-        } else {
-            pageRecords = merged.subList(fromIndex, toIndex);
+            case "AUDIO":
+                Page<AudioMaterial> audioPage = new Page<>(pageNum, pageSize);
+                LambdaQueryWrapper<AudioMaterial> audioWrapper = new LambdaQueryWrapper<>();
+                audioWrapper.eq(AudioMaterial::getStatus, 1);
+                audioWrapper.orderByDesc(AudioMaterial::getCreatedAt);
+                audioMaterialMapper.selectPage(audioPage, audioWrapper);
+                
+                resultPage.setRecords(audioPage.getRecords().stream()
+                        .map(this::convertToVO).collect(Collectors.toList()));
+                resultPage.setTotal(audioPage.getTotal());
+                break;
         }
 
-        Page<MaterialVO> result = new Page<>(page.getCurrent(), page.getSize());
-        result.setRecords(pageRecords);
-        result.setTotal(imagePage.getTotal() + videoPage.getTotal() + audioPage.getTotal());
-        return result;
-    }
-
-    private Page<ImageMaterial> selectImageMaterials(long fetchSize, String keyword, String userId) {
-        LambdaQueryWrapper<ImageMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ImageMaterial::getUploaderId, userId);
-        wrapper.eq(ImageMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(ImageMaterial::getImageName, keyword);
-        }
-        wrapper.orderByDesc(ImageMaterial::getCreatedAt);
-        return imageMaterialMapper.selectPage(new Page<>(1, fetchSize), wrapper);
-    }
-
-    private Page<VideoMaterial> selectVideoMaterials(long fetchSize, String keyword, String userId) {
-        LambdaQueryWrapper<VideoMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VideoMaterial::getUploaderId, userId);
-        wrapper.eq(VideoMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(VideoMaterial::getVideoName, keyword);
-        }
-        wrapper.orderByDesc(VideoMaterial::getCreatedAt);
-        return videoMaterialMapper.selectPage(new Page<>(1, fetchSize), wrapper);
-    }
-
-    private Page<AudioMaterial> selectAudioMaterials(long fetchSize, String keyword, String userId) {
-        LambdaQueryWrapper<AudioMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AudioMaterial::getUploaderId, userId);
-        wrapper.eq(AudioMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(AudioMaterial::getAudioName, keyword);
-        }
-        wrapper.orderByDesc(AudioMaterial::getCreatedAt);
-        return audioMaterialMapper.selectPage(new Page<>(1, fetchSize), wrapper);
-    }
-
-    private Page<MaterialVO> getImageMaterialList(Page<MaterialVO> page, String keyword, String userId) {
-        LambdaQueryWrapper<ImageMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ImageMaterial::getUploaderId, userId);
-        wrapper.eq(ImageMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(ImageMaterial::getImageName, keyword);
-        }
-        wrapper.orderByDesc(ImageMaterial::getCreatedAt);
-
-        Page<ImageMaterial> materialPage = imageMaterialMapper.selectPage(
-                new Page<>(page.getCurrent(), page.getSize()), wrapper);
-
-        List<MaterialVO> voList = materialPage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getImageName());
-            vo.setType("image");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setResolution(material.getResolution());
-            vo.setFormat(material.getFormat());
-            return vo;
-        }).collect(Collectors.toList());
-
-        Page<MaterialVO> result = new Page<>(page.getCurrent(), page.getSize());
-        result.setRecords(voList);
-        result.setTotal(materialPage.getTotal());
-        return result;
-    }
-
-    private Page<MaterialVO> getVideoMaterialList(Page<MaterialVO> page, String keyword, String userId) {
-        LambdaQueryWrapper<VideoMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VideoMaterial::getUploaderId, userId);
-        wrapper.eq(VideoMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(VideoMaterial::getVideoName, keyword);
-        }
-        wrapper.orderByDesc(VideoMaterial::getCreatedAt);
-
-        Page<VideoMaterial> materialPage = videoMaterialMapper.selectPage(
-                new Page<>(page.getCurrent(), page.getSize()), wrapper);
-
-        List<MaterialVO> voList = materialPage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getVideoName());
-            vo.setType("video");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setResolution(material.getResolution());
-            vo.setDurationSeconds(material.getDurationSeconds());
-            vo.setFormat(material.getFormat());
-            return vo;
-        }).collect(Collectors.toList());
-
-        Page<MaterialVO> result = new Page<>(page.getCurrent(), page.getSize());
-        result.setRecords(voList);
-        result.setTotal(materialPage.getTotal());
-        return result;
-    }
-
-    private Page<MaterialVO> getAudioMaterialList(Page<MaterialVO> page, String keyword, String userId) {
-        LambdaQueryWrapper<AudioMaterial> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AudioMaterial::getUploaderId, userId);
-        wrapper.eq(AudioMaterial::getIsDeleted, 0);
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(AudioMaterial::getAudioName, keyword);
-        }
-        wrapper.orderByDesc(AudioMaterial::getCreatedAt);
-
-        Page<AudioMaterial> materialPage = audioMaterialMapper.selectPage(
-                new Page<>(page.getCurrent(), page.getSize()), wrapper);
-
-        List<MaterialVO> voList = materialPage.getRecords().stream().map(material -> {
-            MaterialVO vo = new MaterialVO();
-            vo.setId(material.getId());
-            vo.setName(material.getAudioName());
-            vo.setType("audio");
-            vo.setUrl(material.getFilePath());
-            vo.setSize(material.getFileSize());
-            vo.setCreateTime(material.getCreatedAt());
-            vo.setDurationSeconds(material.getDurationSeconds());
-            return vo;
-        }).collect(Collectors.toList());
-
-        Page<MaterialVO> result = new Page<>(page.getCurrent(), page.getSize());
-        result.setRecords(voList);
-        result.setTotal(materialPage.getTotal());
-        return result;
+        return resultPage;
     }
 
     @Override
-    @Transactional
-    public boolean deleteMaterial(String materialId, String materialType, String userId) {
-        try {
-            if ("image".equals(materialType)) {
-                ImageMaterial material = imageMaterialMapper.selectById(materialId);
-                if (material == null || !material.getUploaderId().equals(userId)) {
-                    throw new BusinessException(20001, "素材不存在或无权限删除");
-                }
-                // 逻辑删除
-                material.setIsDeleted(1);
-                imageMaterialMapper.updateById(material);
-                // 删除文件
-                materialFileUtils.deleteFile(material.getFilePath());
-            } else if ("video".equals(materialType)) {
-                VideoMaterial material = videoMaterialMapper.selectById(materialId);
-                if (material == null || !material.getUploaderId().equals(userId)) {
-                    throw new BusinessException(20001, "素材不存在或无权限删除");
-                }
-                material.setIsDeleted(1);
-                videoMaterialMapper.updateById(material);
-                materialFileUtils.deleteFile(material.getFilePath());
-            } else if ("audio".equals(materialType)) {
-                AudioMaterial material = audioMaterialMapper.selectById(materialId);
-                if (material == null || !material.getUploaderId().equals(userId)) {
-                    throw new BusinessException(20001, "素材不存在或无权限删除");
-                }
-                material.setIsDeleted(1);
-                audioMaterialMapper.updateById(material);
-                materialFileUtils.deleteFile(material.getFilePath());
+    public MaterialBatchDeleteResponse batchDelete(List<String> materialIds, String type) {
+        MaterialBatchDeleteResponse response = new MaterialBatchDeleteResponse();
+        int success = 0;
+        int fail = 0;
+
+        for (String id : materialIds) {
+            if (deleteMaterial(id, type)) {
+                success++;
+            } else {
+                fail++;
             }
-            return true;
-        } catch (Exception e) {
-            log.error("删除素材失败", e);
-            throw new BusinessException(20001, "删除失败: " + e.getMessage());
+        }
+
+        response.setSuccessCount(success);
+        response.setFailCount(fail);
+        return response;
+    }
+
+    @Override
+    public boolean deleteMaterial(String materialId, String type) {
+        if (!StringUtils.hasText(type)) {
+            return false;
+        }
+
+        switch (type.toUpperCase()) {
+            case "IMAGE":
+                return imageMaterialMapper.deleteById(materialId) > 0;
+            case "VIDEO":
+                return videoMaterialMapper.deleteById(materialId) > 0;
+            case "AUDIO":
+                return audioMaterialMapper.deleteById(materialId) > 0;
+            default:
+                return false;
         }
     }
 
-    private String generateMaterialId(String type) {
-        String prefix = type.substring(0, 1).toUpperCase();
-        return prefix + IdUtil.fastSimpleUUID().substring(0, 15);
+    // ========== 转换方法 ==========
+
+    private MaterialVO convertToVO(ImageMaterial entity) {
+        MaterialVO vo = new MaterialVO();
+        vo.setMaterialId(entity.getId());
+        vo.setName(entity.getImageName());
+        vo.setType("IMAGE");
+        vo.setUrl(entity.getFilePath());
+        vo.setResolution(entity.getResolution());
+        vo.setFileSize(entity.getFileSize());
+        vo.setTags(parseTags(entity.getTags()));
+        vo.setSourceType(mapSourceType(entity.getSourceType()));
+        vo.setCopyrightStatus(mapCopyrightStatus(entity.getCopyrightStatus()));
+        vo.setIsSystem(entity.getSourceType() != null && entity.getSourceType() == 1);
+        if (entity.getCreatedAt() != null) {
+            vo.setCreateTime(entity.getCreatedAt().format(DATE_FORMATTER));
+        }
+        return vo;
     }
 
-    private String getFileExtension(String filename) {
-        if (filename == null || filename.isEmpty()) {
-            return "";
+    private MaterialVO convertToVO(VideoMaterial entity) {
+        MaterialVO vo = new MaterialVO();
+        vo.setMaterialId(entity.getId());
+        vo.setName(entity.getVideoName());
+        vo.setType("VIDEO");
+        vo.setUrl(entity.getFilePath());
+        vo.setResolution(entity.getResolution());
+        vo.setDurationSeconds(entity.getDurationSeconds());
+        vo.setFileSize(entity.getFileSize());
+        vo.setTags(parseTags(entity.getTags()));
+        vo.setSourceType(mapSourceType(entity.getSourceType()));
+        vo.setCopyrightStatus(mapCopyrightStatus(entity.getCopyrightStatus()));
+        vo.setIsSystem(entity.getSourceType() != null && entity.getSourceType() == 1);
+        if (entity.getCreatedAt() != null) {
+            vo.setCreateTime(entity.getCreatedAt().format(DATE_FORMATTER));
         }
-        int lastDot = filename.lastIndexOf('.');
-        if (lastDot == -1) {
-            return "";
+        return vo;
+    }
+
+    private MaterialVO convertToVO(AudioMaterial entity) {
+        MaterialVO vo = new MaterialVO();
+        vo.setMaterialId(entity.getId());
+        vo.setName(entity.getAudioName());
+        vo.setType("AUDIO");
+        vo.setUrl(entity.getFilePath());
+        vo.setDurationSeconds(entity.getDurationSeconds());
+        vo.setFileSize(entity.getFileSize());
+        vo.setTags(parseTags(entity.getTags()));
+        vo.setCopyrightStatus(mapCopyrightStatus(entity.getCopyrightStatus()));
+        if (entity.getCreatedAt() != null) {
+            vo.setCreateTime(entity.getCreatedAt().format(DATE_FORMATTER));
         }
-        return filename.substring(lastDot + 1).toLowerCase();
+        return vo;
+    }
+
+    private List<String> parseTags(String tags) {
+        if (!StringUtils.hasText(tags)) {
+            return List.of();
+        }
+        return Arrays.asList(tags.split(","));
+    }
+
+    private String mapSourceType(Integer sourceType) {
+        if (sourceType == null) return "USER_UPLOAD";
+        switch (sourceType) {
+            case 1: return "SYSTEM";
+            case 2: return "USER_UPLOAD";
+            case 3: return "AI_GENERATED";
+            default: return "USER_UPLOAD";
+        }
+    }
+
+    private String mapCopyrightStatus(Integer copyrightStatus) {
+        if (copyrightStatus == null) return "PERSONAL_USE";
+        switch (copyrightStatus) {
+            case 1: return "FREE_COMMERCIAL";
+            case 2: return "PAID";
+            case 3: return "PERSONAL_USE";
+            default: return "PERSONAL_USE";
+        }
     }
 }
