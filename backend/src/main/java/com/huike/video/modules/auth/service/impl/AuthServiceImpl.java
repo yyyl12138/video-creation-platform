@@ -10,13 +10,14 @@ import com.huike.video.modules.auth.service.AuthService;
 import com.huike.video.modules.auth.vo.AuthLoginResponse;
 import com.huike.video.modules.auth.vo.AuthRegisterResponse;
 import com.huike.video.modules.auth.vo.AuthSwitchRoleResponse;
-import com.huike.video.modules.role.entity.Role;
-import com.huike.video.modules.role.mapper.RoleMapper;
-import com.huike.video.modules.role.service.RoleService;
+import com.huike.video.modules.user.role.entity.Role;
+import com.huike.video.modules.user.role.mapper.RoleMapper;
+import com.huike.video.modules.user.role.service.RoleService;
 import com.huike.video.modules.user.entity.User;
 import com.huike.video.modules.user.mapper.UserMapper;
-import com.huike.video.modules.wallet.entity.UserWallet;
-import com.huike.video.modules.wallet.mapper.UserWalletMapper;
+import com.huike.video.modules.user.wallet.entity.UserWallet;
+import com.huike.video.modules.user.wallet.mapper.UserWalletMapper;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -176,5 +177,41 @@ public class AuthServiceImpl implements AuthService {
         String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
         int suffix = new Random().nextInt(90000) + 10000;
         return "W" + date + suffix;
+    }
+
+    // ========== 新增方法 (TODO: 完善业务逻辑) ==========
+
+    @Override
+    public Boolean sendCode(com.huike.video.modules.auth.dto.SendCodeRequest request) {
+        // TODO: 实现发送验证码逻辑
+        return true;
+    }
+
+    @Override
+    public AuthLoginResponse loginBySms(com.huike.video.modules.auth.dto.LoginBySmsRequest request) {
+        // TODO: 实现短信登录逻辑
+        throw new BusinessException(50001, "功能开发中");
+    }
+
+    @Override
+    public Boolean resetPassword(com.huike.video.modules.auth.dto.ResetPasswordRequest request) {
+        // TODO: 实现密码重置逻辑
+        throw new BusinessException(50001, "功能开发中");
+    }
+
+    @Override
+    public com.huike.video.modules.auth.vo.AuthRefreshResponse refresh(com.huike.video.modules.auth.dto.RefreshTokenRequest request) {
+        // 简单刷新: 验证 token 后重新签发
+        com.huike.video.modules.auth.vo.AuthRefreshResponse response = new com.huike.video.modules.auth.vo.AuthRefreshResponse();
+        response.setToken(StpUtil.getTokenValue());
+        response.setRefreshToken(StpUtil.getTokenValue());
+        response.setExpireIn(StpUtil.getTokenTimeout());
+        return response;
+    }
+
+    @Override
+    public Boolean logout() {
+        StpUtil.logout();
+        return true;
     }
 }

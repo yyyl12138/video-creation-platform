@@ -50,7 +50,7 @@ public class AuthController {
         return result;
     }
 
-    @PostMapping("/send-code")
+    @PostMapping("/verification-code")
     public Result<Boolean> sendCode(@Valid @RequestBody SendCodeRequest request) {
         return Result.success(authService.sendCode(request));
     }
@@ -60,7 +60,7 @@ public class AuthController {
         return Result.success(authService.loginBySms(request));
     }
 
-    @PostMapping("/reset-password")
+    @PostMapping("/password/reset")
     public Result<Boolean> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return Result.success(authService.resetPassword(request));
     }

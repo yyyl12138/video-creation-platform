@@ -14,8 +14,7 @@ import com.huike.video.modules.creation.mapper.AiTaskMapper;
 import com.huike.video.modules.creation.service.AiModelService;
 import com.huike.video.modules.creation.service.CreationService;
 import com.huike.video.modules.creation.strategy.StrategyManager;
-import com.huike.video.modules.wallet.entity.UserWallet;
-import com.huike.video.modules.wallet.mapper.UserWalletMapper;
+import com.huike.video.modules.user.wallet.service.WalletService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -37,19 +36,19 @@ public class CreationServiceImpl implements CreationService {
     private final AiModelService aiModelService;
     private final StrategyManager strategyManager;
     private final AiTaskMapper aiTaskMapper;
-    private final UserWalletMapper userWalletMapper;
+    private final WalletService walletService;
     private final Executor creationTaskExecutor;
 
     public CreationServiceImpl(
             AiModelService aiModelService,
             StrategyManager strategyManager,
             AiTaskMapper aiTaskMapper,
-            UserWalletMapper userWalletMapper,
+            WalletService walletService,
             @Qualifier("creationTaskExecutor") Executor creationTaskExecutor) {
         this.aiModelService = aiModelService;
         this.strategyManager = strategyManager;
         this.aiTaskMapper = aiTaskMapper;
-        this.userWalletMapper = userWalletMapper;
+        this.walletService = walletService;
         this.creationTaskExecutor = creationTaskExecutor;
     }
 
@@ -76,13 +75,13 @@ public class CreationServiceImpl implements CreationService {
         // 2. 计算费用并校验余额
         // 注意：这里使用 user prompt 来估算
         BigDecimal cost = calculateCost(model, request.getPrompt());
-        UserWallet wallet = getWalletByUserId(userId);
-        if (wallet.getBalance().compareTo(cost) < 0) {
-            throw new BusinessException(30001, "余额不足，当前余额: " + wallet.getBalance() + ", 需要: " + cost);
+        BigDecimal currentBalance = walletService.getBalanceByUserId(userId);
+        if (currentBalance.compareTo(cost) < 0) {
+            throw new BusinessException(30001, "余额不足，当前余额: " + currentBalance + ", 需要: " + cost);
         }
 
         // 3. 预扣费
-        deductBalance(userId, cost);
+        boolean deducted = walletService.deductBalance(userId, cost);
 
         // 4. 创建任务记录
         String taskId = IdUtil.simpleUUID();
@@ -145,7 +144,7 @@ public class CreationServiceImpl implements CreationService {
             task.setErrorMessage(e.getMessage());
             aiTaskMapper.updateById(task);
             // 退款
-            refundBalance(userId, cost);
+            walletService.refundBalance(userId, cost);
             throw new BusinessException(500, "任务执行失败: " + e.getMessage());
         }
 
@@ -167,8 +166,8 @@ public class CreationServiceImpl implements CreationService {
 
         // 2. 校验余额 (预估)
         BigDecimal estimatedCost = calculateCost(model, request.getPrompt());
-        UserWallet wallet = getWalletByUserId(userId);
-        if (wallet.getBalance().compareTo(estimatedCost) < 0) {
+        BigDecimal currentBalance = walletService.getBalanceByUserId(userId);
+        if (currentBalance.compareTo(estimatedCost) < 0) {
             throw new BusinessException(30001, "余额不足");
         }
 
@@ -177,7 +176,7 @@ public class CreationServiceImpl implements CreationService {
 
         // 4. 按实际消耗扣费
         BigDecimal actualCost = calculateActualCost(model, response.getUsageTokens());
-        deductBalance(userId, actualCost);
+        walletService.deductBalance(userId, actualCost);
 
         // 5. 异步记录到 AiTask 表 (Log for Audit)
         // 虽然是同步请求，但也最好留底，特别是为了流水查询
@@ -368,16 +367,6 @@ public class CreationServiceImpl implements CreationService {
         }
     }
 
-    private UserWallet getWalletByUserId(String userId) {
-        LambdaQueryWrapper<UserWallet> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserWallet::getUserId, userId);
-        UserWallet wallet = userWalletMapper.selectOne(wrapper);
-        if (wallet == null) {
-            throw new BusinessException(30003, "用户钱包未找到: " + userId);
-        }
-        return wallet;
-    }
-
     private BigDecimal calculateCost(AiModel model, String prompt) {
         BigDecimal unitPrice = model.getUnitPrice();
         if (unitPrice == null) {
@@ -393,22 +382,6 @@ public class CreationServiceImpl implements CreationService {
             return unitPrice.multiply(BigDecimal.valueOf(tokens))
                     .divide(BigDecimal.valueOf(1_000_000), 6, BigDecimal.ROUND_HALF_UP);
         }
-    }
-
-    private void deductBalance(String userId, BigDecimal amount) {
-        LambdaUpdateWrapper<UserWallet> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(UserWallet::getUserId, userId)
-               .setSql("balance = balance - " + amount)
-               .setSql("total_consumed = total_consumed + " + amount);
-        userWalletMapper.update(null, wrapper);
-    }
-
-    private void refundBalance(String userId, BigDecimal amount) {
-        LambdaUpdateWrapper<UserWallet> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(UserWallet::getUserId, userId)
-               .setSql("balance = balance + " + amount)
-               .setSql("total_consumed = total_consumed - " + amount);
-        userWalletMapper.update(null, wrapper);
     }
 
     /**
