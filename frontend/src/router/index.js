@@ -72,6 +72,7 @@ const router = createRouter({
             path: '/creation',
             component: () => import('../layout/Layout.vue'),
             children: [
+                { path: 'generation', component: () => import('../views/creation/Generation.vue') },
                 { path: 'task', component: () => import('../views/creation/TaskList.vue') },
                 { path: 'project', component: () => import('../views/creation/ProjectEdit.vue') }
             ]
@@ -97,3 +98,4 @@ const router = createRouter({
 })
 
 export default router
+
