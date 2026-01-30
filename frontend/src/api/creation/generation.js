@@ -13,7 +13,7 @@ import request from '@/utils/request'
  */
 export function submitGenerationTask(data) {
   return request({
-    url: '/api/v1/generation/tasks',
+    url: '/generation/tasks',
     method: 'post',
     data
   })
@@ -25,7 +25,7 @@ export function submitGenerationTask(data) {
  */
 export function getTaskStatus(taskId) {
   return request({
-    url: `/api/v1/generation/tasks/${taskId}`,
+    url: `/generation/tasks/${taskId}`,
     method: 'get'
   })
 }
@@ -40,8 +40,20 @@ export function getTaskStatus(taskId) {
  */
 export function getTaskList(params) {
   return request({
-    url: '/api/v1/generation/tasks',
+    url: '/generation/tasks',
     method: 'get',
     params
+  })
+}
+
+// generation.js 中需要添加
+/**
+ * 取消任务
+ * @param {string} taskId - 任务ID
+ */
+export function cancelGenerationTask(taskId) {
+  return request({
+    url: '/generation/tasks/${taskId}/cancel',
+    method: 'post'
   })
 }
