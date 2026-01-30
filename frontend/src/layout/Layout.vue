@@ -38,6 +38,7 @@
               <el-icon><VideoCamera /></el-icon>
               <span>创作中心 (Creation)</span>
             </template>
+            <el-menu-item index="/creation/generation">AI 创作</el-menu-item>
             <el-menu-item index="/creation/task">任务管理</el-menu-item>
             <el-menu-item index="/creation/project">剪辑工程</el-menu-item>
           </el-sub-menu>
