@@ -5,13 +5,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * 文件存储工具类
  * 从 application.yml 读取 file.upload-path 配置
+ * 提供文件上传、下载的统一封装
  */
 @Slf4j
 @Component
@@ -45,6 +51,83 @@ public class FileStorageUtils {
      */
     public static String getBasePath() {
         return BASE_STORAGE_PATH;
+    }
+
+    // ==================== 上传相关方法 ====================
+
+    /**
+     * 上传 MultipartFile 文件到指定子目录
+     * @param file 上传的文件
+     * @param subDir 子目录 (如 "avatar", "images", "videos")
+     * @param fileNamePrefix 文件名前缀 (如 userId)
+     * @return 可用于访问的相对路径 (如 /storage/avatar/u123_1704067200.jpg)
+     * @throws IOException 文件写入失败
+     */
+    public static String uploadFile(MultipartFile file, String subDir, String fileNamePrefix) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传文件不能为空");
+        }
+
+        // 提取文件扩展名
+        String ext = extractExtension(file.getOriginalFilename());
+        if (!StringUtils.hasText(ext)) {
+            ext = ".bin";
+        }
+
+        // 生成唯一文件名
+        String fileName = fileNamePrefix + "_" + System.currentTimeMillis() + ext;
+
+        // 构建目标路径
+        String targetDir = BASE_STORAGE_PATH;
+        if (StringUtils.hasText(subDir)) {
+            targetDir += subDir + File.separator;
+        }
+
+        Path targetPath = Paths.get(targetDir, fileName);
+        
+        // 确保目录存在
+        Files.createDirectories(targetPath.getParent());
+        
+        // 写入文件
+        file.transferTo(targetPath);
+        log.info("文件上传成功: {} ({}字节)", targetPath, file.getSize());
+
+        // 返回相对访问路径
+        String relativePath = "/storage/";
+        if (StringUtils.hasText(subDir)) {
+            relativePath += subDir + "/";
+        }
+        return relativePath + fileName;
+    }
+
+    /**
+     * 上传文件并返回完整 URL
+     * @param file 上传的文件
+     * @param subDir 子目录
+     * @param fileNamePrefix 文件名前缀
+     * @param baseUrl 服务器基础URL (如 http://localhost:8080)
+     * @return 完整访问 URL
+     * @throws IOException 文件写入失败
+     */
+    public static String uploadFileWithFullUrl(MultipartFile file, String subDir, String fileNamePrefix, String baseUrl) throws IOException {
+        String relativePath = uploadFile(file, subDir, fileNamePrefix);
+        return (baseUrl != null ? baseUrl : "") + relativePath;
+    }
+
+    /**
+     * 从原始文件名中提取扩展名
+     * @param originalFilename 原始文件名
+     * @return 扩展名 (带点，如 ".jpg")，无扩展名则返回空字符串
+     */
+    public static String extractExtension(String originalFilename) {
+        if (!StringUtils.hasText(originalFilename)) {
+            return "";
+        }
+        int idx = originalFilename.lastIndexOf('.');
+        if (idx >= 0 && idx < originalFilename.length() - 1) {
+            return originalFilename.substring(idx);
+        }
+        return "";
     }
 
     /**

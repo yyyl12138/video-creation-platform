@@ -5,6 +5,7 @@ import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.huike.video.common.exception.BusinessException;
+import com.huike.video.common.util.FileStorageUtils;
 import com.huike.video.modules.user.dto.ApplyCreatorRequest;
 import com.huike.video.modules.user.dto.ChangePasswordRequest;
 import com.huike.video.modules.user.dto.UpdateUserProfileRequest;
@@ -18,16 +19,12 @@ import com.huike.video.modules.user.service.UserService;
 import com.huike.video.modules.user.vo.UserMeResponse;
 import com.huike.video.modules.user.vo.UploadAvatarResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 
 @Service
@@ -38,9 +35,6 @@ public class UserServiceImpl implements UserService {
     private final UserProfileMapper userProfileMapper;
     private final CreatorMapper creatorMapper;
     private final BCryptPasswordEncoder passwordEncoder;
-
-    @Value("${file.upload-path}")
-    private String uploadPath;
 
     @Override
     public UserMeResponse getMe() {
@@ -174,34 +168,22 @@ public class UserServiceImpl implements UserService {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(99999, "file不能为空");
         }
+        
         String userId = StpUtil.getLoginIdAsString();
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(10002, "用户不存在");
         }
 
-        String original = file.getOriginalFilename();
-        String ext = "";
-        if (original != null) {
-            int idx = original.lastIndexOf('.');
-            if (idx >= 0 && idx < original.length() - 1) {
-                ext = original.substring(idx);
-            }
-        }
-        if (ext.isBlank()) {
-            ext = ".jpg";
-        }
-
-        String relativePath = "avatar/" + userId + "_" + System.currentTimeMillis() + ext;
-        Path target = Paths.get(uploadPath).resolve(relativePath);
+        // 使用工具类上传文件
+        String avatarUrl;
         try {
-            Files.createDirectories(target.getParent());
-            file.transferTo(target);
+            avatarUrl = FileStorageUtils.uploadFileWithFullUrl(file, "avatar", userId, baseUrl);
         } catch (IOException e) {
-            throw new BusinessException(50001, "头像保存失败");
+            throw new BusinessException(50001, "头像保存失败: " + e.getMessage());
         }
 
-        String avatarUrl = (baseUrl == null ? "" : baseUrl) + "/profile/upload/" + relativePath.replace("\\", "/");
+        // 更新用户头像URL
         int updated = userMapper.update(null, new LambdaUpdateWrapper<User>()
                 .eq(User::getId, userId)
                 .set(User::getAvatarUrl, avatarUrl));

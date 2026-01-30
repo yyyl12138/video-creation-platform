@@ -21,21 +21,27 @@ public interface WalletService {
      */
     WalletTransactionsResponse getMyTransactions(Integer page, Integer size, String type);
 
-    /**
-     * 扣除用户余额（原子操作）
-     * @param userId 用户ID
-     * @param amount 扣除金额
-     * @return 是否成功
-     */
-    boolean deductBalance(String userId, BigDecimal amount);
+
 
     /**
-     * 退款到用户余额（原子操作）
+     * 扣除用户余额（原子操作），并记录交易流水
      * @param userId 用户ID
-     * @param amount 退款金额
+     * @param amount 扣除金额
+     * @param relatedTaskId 关联任务ID（可选）
+     * @param description 交易描述
      * @return 是否成功
      */
-    boolean refundBalance(String userId, BigDecimal amount);
+    boolean deductBalance(String userId, BigDecimal amount, String relatedTaskId, String description);
+
+    /**
+     * 退款到用户余额（原子操作），并记录交易流水
+     * @param userId 用户ID
+     * @param amount 退款金额
+     * @param relatedTaskId 关联任务ID（可选）
+     * @param description 交易描述
+     * @return 是否成功
+     */
+    boolean refundBalance(String userId, BigDecimal amount, String relatedTaskId, String description);
 
     /**
      * 根据用户ID获取钱包（用于内部服务调用）

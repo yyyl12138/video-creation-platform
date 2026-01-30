@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 @Data
 public class WalletMeResponse {
 
+    private String walletId;
+
     private BigDecimal balance;
 
     private BigDecimal totalRecharged;

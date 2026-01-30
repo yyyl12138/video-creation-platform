@@ -27,6 +27,8 @@ public class WalletTransactionsResponse {
 
         private String description;
 
+        private String relatedTaskId;
+
         private String createdTime;
     }
 

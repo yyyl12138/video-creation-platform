@@ -73,18 +73,18 @@ public class CreationServiceImpl implements CreationService {
         }
 
         // 2. 计算费用并校验余额
-        // 注意：这里使用 user prompt 来估算
+        // 这里使用 user prompt 来估算
         BigDecimal cost = calculateCost(model, request.getPrompt());
         BigDecimal currentBalance = walletService.getBalanceByUserId(userId);
         if (currentBalance.compareTo(cost) < 0) {
             throw new BusinessException(30001, "余额不足，当前余额: " + currentBalance + ", 需要: " + cost);
         }
 
-        // 3. 预扣费
-        boolean deducted = walletService.deductBalance(userId, cost);
+        // 3. 预扣费 (taskId 在此时为 null，将在 catch 块中补充记录)
+        String taskId = IdUtil.simpleUUID();
+        boolean deducted = walletService.deductBalance(userId, cost, taskId, "AI生成任务预扣费");
 
         // 4. 创建任务记录
-        String taskId = IdUtil.simpleUUID();
         AiTask task = new AiTask();
         task.setId(taskId);
         task.setUserId(userId);
@@ -144,7 +144,7 @@ public class CreationServiceImpl implements CreationService {
             task.setErrorMessage(e.getMessage());
             aiTaskMapper.updateById(task);
             // 退款
-            walletService.refundBalance(userId, cost);
+            walletService.refundBalance(userId, cost, taskId, "任务执行失败退款");
             throw new BusinessException(500, "任务执行失败: " + e.getMessage());
         }
 
@@ -176,7 +176,7 @@ public class CreationServiceImpl implements CreationService {
 
         // 4. 按实际消耗扣费
         BigDecimal actualCost = calculateActualCost(model, response.getUsageTokens());
-        walletService.deductBalance(userId, actualCost);
+        walletService.deductBalance(userId, actualCost, null, "AI文本生成消费");
 
         // 5. 异步记录到 AiTask 表 (Log for Audit)
         // 虽然是同步请求，但也最好留底，特别是为了流水查询
