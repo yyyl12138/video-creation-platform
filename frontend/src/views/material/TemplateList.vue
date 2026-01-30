@@ -174,6 +174,7 @@ import {
   Plus, Search, UploadFilled, VideoCamera, MagicStick,
   View, Delete, Check, FolderOpened
 } from '@element-plus/icons-vue'
+import { getTemplates, uploadTemplate, deleteTemplate, useTemplate } from '@/api/user/material'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -270,24 +271,25 @@ const formatDate = (dateString) => {
 const loadTemplates = async () => {
   try {
     loading.value = true
-    setTimeout(() => {
-      let filtered = [...mockTemplates]
-      if (searchKeyword.value) {
-        filtered = filtered.filter(item => 
-          item.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-        )
-      }
-      if (filterCategory.value) {
-        filtered = filtered.filter(item => item.category === filterCategory.value)
-      }
-      if (filterScene.value) {
-        filtered = filtered.filter(item => item.scene === filterScene.value)
-      }
-      templateList.value = filtered
-      loading.value = false
-    }, 300)
+    const params = {
+      page: 1,
+      size: 20
+    }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+    if (filterCategory.value) {
+      params.category = filterCategory.value
+    }
+    if (filterScene.value) {
+      params.scene = filterScene.value
+    }
+    const res = await getTemplates(params)
+    templateList.value = res.list || []
+    loading.value = false
   } catch (error) {
-    ElMessage.error('加载失败')
+    console.error('加载模板失败:', error)
+    ElMessage.error(error.message || '加载失败')
     loading.value = false
   }
 }
@@ -317,27 +319,52 @@ const submitUpload = async () => {
   }
   try {
     uploading.value = true
-    await new Promise(r => setTimeout(r, 1500))
+    const formData = new FormData()
+    uploadFileList.value.forEach(file => {
+      formData.append('files', file.raw)
+    })
+    formData.append('name', uploadFileList.value[0].name)
+    await uploadTemplate(formData)
     ElMessage.success(`成功上传 ${uploadFileList.value.length} 个模板`)
     showUploadDialog.value = false
     clearUploadList()
     loadTemplates()
   } catch (error) {
-    ElMessage.error('上传失败')
+    console.error('上传失败:', error)
+    ElMessage.error(error.message || '上传失败')
   } finally {
     uploading.value = false
   }
 }
 
-const handlePreview = (template) => ElMessage.info(`预览: ${template.name}`)
-const handleUseTemplate = (template) => ElMessage.success(`开始使用: ${template.name}`)
+const handlePreview = (template) => {
+  ElMessage.info(`预览: ${template.name}`)
+  // TODO: 实现预览功能，可以打开视频播放器弹窗
+}
+
+const handleUseTemplate = async (template) => {
+  try {
+    await useTemplate(template.templateId || template.id)
+    ElMessage.success(`开始使用: ${template.name}`)
+    // TODO: 跳转到创作页面
+  } catch (error) {
+    console.error('使用模板失败:', error)
+    ElMessage.error(error.message || '使用模板失败')
+  }
+}
 
 const handleDelete = async (template) => {
   try {
     await ElMessageBox.confirm(`确定删除 "${template.name}"？`, '确认', { type: 'warning' })
+    await deleteTemplate(template.templateId || template.id)
     ElMessage.success('删除成功')
     loadTemplates()
-  } catch {}
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
 }
 
 onMounted(() => loadTemplates())
