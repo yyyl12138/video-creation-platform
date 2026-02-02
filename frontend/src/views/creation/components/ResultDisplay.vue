@@ -50,7 +50,7 @@
               <el-tag type="success" size="small">已完成</el-tag>
             </div>
           </template>
-          <p class="text-content">{{ result.fileUrl }}</p>
+          <p class="text-content">{{ result.content }}</p>
         </el-card>
       </div>
 
@@ -63,7 +63,7 @@
               <el-tag type="success" size="small">已完成</el-tag>
             </div>
           </template>
-          <img :src="result.fileUrl" alt="生成图片" class="generated-image" />
+          <img :src="getFullUrl(result.fileUrl)" alt="生成图片" class="generated-image" />
           <div v-if="result.size" class="file-info">
             <el-icon><Document /></el-icon>
             <span>大小：{{ formatFileSize(result.size) }}</span>
@@ -80,12 +80,12 @@
               <el-tag type="success" size="small">已完成</el-tag>
             </div>
           </template>
-          <video :src="result.fileUrl" controls class="generated-video" />
+          <video :src="getFullUrl(result.fileUrl)" controls class="generated-video" />
           
           <!-- 封面图 -->
           <div v-if="result.coverUrl" class="cover-section">
             <p>封面预览：</p>
-            <img :src="result.coverUrl" alt="封面图" class="cover-image" />
+            <img :src="getFullUrl(result.coverUrl)" alt="封面图" class="cover-image" />
           </div>
           
           <!-- 文件信息 -->
@@ -155,9 +155,21 @@ const downloadResult = () => {
   if (!result.value?.fileUrl) return
 
   const link = document.createElement('a')
-  link.href = result.value.fileUrl
+  link.href = getFullUrl(result.value.fileUrl)
   link.download = `ai-generated-${Date.now()}`
   link.click()
+}
+
+const getFullUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  const baseUrl = import.meta.env.VITE_APP_BASE_API || ''
+  // 去除 baseUrl 结尾的 / 和 url 开头的 /，防止双斜杠
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanUrl = url.startsWith('/') ? url : '/' + url
+  return cleanBase + cleanUrl
 }
 </script>
 

@@ -6,6 +6,17 @@
       </template>
       
       <el-form :model="form" label-width="100px">
+        <!-- 用户名 -->
+        <el-form-item label="用户名" required>
+          <el-input 
+            v-model="form.username" 
+            placeholder="请输入用户名（4-20位）"
+            maxlength="20"
+            @input="validateUsername"
+          />
+          <div v-if="usernameError" class="error-text">{{ usernameError }}</div>
+        </el-form-item>
+
         <!-- 手机号输入 -->
         <el-form-item label="手机号" required>
           <el-input 
@@ -91,16 +102,31 @@ const countdown = ref(0)
 let countdownTimer = null
 
 const form = reactive({
+  username: '',
   phone: '',
   code: '',
   password: '',
   agreed: false
 })
 
+const usernameError = ref('')
 const phoneError = ref('')
 const codeError = ref('')
 const passwordError = ref('')
 const agreementError = ref('')
+
+// 验证用户名
+const validateUsername = () => {
+  if (!form.username) {
+    usernameError.value = '用户名不能为空'
+    return
+  }
+  if (form.username.length < 4 || form.username.length > 20) {
+    usernameError.value = '用户名长度必须在4-20之间'
+  } else {
+    usernameError.value = ''
+  }
+}
 
 // 验证手机号格式
 const validatePhone = () => {
@@ -162,6 +188,7 @@ const isPhoneValid = computed(() => {
 const isFormValid = computed(() => {
   return isPhoneValid.value && 
          /^\d{6}$/.test(form.code) &&
+         form.username.length >= 4 &&
          form.password.length >= 8 &&
          form.password.length <= 20 &&
          /(?=.*[a-zA-Z])(?=.*\d)/.test(form.password) &&
@@ -201,6 +228,9 @@ const startCountdown = (seconds = 60) => {
 // 注册处理
 const handleRegister = async () => {
   // 表单验证
+  validateUsername()
+  if (usernameError.value) return
+
   if (!form.agreed) {
     agreementError.value = '请同意用户协议和隐私政策'
     return
@@ -211,6 +241,7 @@ const handleRegister = async () => {
   
   try {
     const res = await registerUser({
+      username: form.username,
       phone: form.phone,
       code: form.code,
       password: form.password
@@ -219,7 +250,12 @@ const handleRegister = async () => {
     ElMessage.success('注册成功')
     // 自动登录并跳转首页
     localStorage.setItem('token', res.data.token)
-    localStorage.setItem('userInfo', JSON.stringify(res.data.user))
+    localStorage.setItem('refreshToken', res.data.refreshToken)
+    // token有效时间通常与后端一致 (2小时) or 使用 res.data.expireIn
+    const expireIn = res.data.expireIn ? res.data.expireIn * 1000 : 2 * 60 * 60 * 1000
+    localStorage.setItem('tokenExpiry', Date.now() + expireIn)
+    
+    localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo || res.data.user)) // Adapt to whatever field name is returned
     router.push('/home')
   } catch (error) {
     const message = error.message || '注册失败'
@@ -229,6 +265,8 @@ const handleRegister = async () => {
       phoneError.value = message
     } else if (message.includes('密码')) {
       passwordError.value = message
+    } else if (message.includes('用户名')) {
+      usernameError.value = message
     } else {
       ElMessage.error(message)
     }

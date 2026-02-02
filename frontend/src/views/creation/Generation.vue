@@ -183,7 +183,9 @@
                       </el-radio-group>
                     </el-form-item>
                     <el-form-item label="时长">
-                      <el-slider v-model="form.inputConfig.duration" :min="3" :max="60" :marks="{ 3: '3s', 60: '60s' }" />
+                      <el-radio-group v-model="form.inputConfig.duration">
+                        <el-radio-button v-for="d in availableDurations" :key="d" :label="d">{{ d }}s</el-radio-button>
+                      </el-radio-group>
                     </el-form-item>
                     <el-form-item label="分辨率">
                       <el-select v-model="form.inputConfig.resolution" style="width: 100%">
@@ -262,7 +264,9 @@
                       />
                     </el-form-item>
                     <el-form-item label="时长">
-                      <el-slider v-model="form.inputConfig.duration" :min="3" :max="60" :marks="{ 3: '3s', 60: '60s' }" />
+                      <el-radio-group v-model="form.inputConfig.duration">
+                        <el-radio-button v-for="d in availableDurations" :key="d" :label="d">{{ d }}s</el-radio-button>
+                      </el-radio-group>
                     </el-form-item>
                     <el-form-item label="分辨率">
                       <el-select v-model="form.inputConfig.resolution" style="width: 100%">
@@ -301,7 +305,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onUnmounted } from 'vue'
+import { ref, reactive, computed, onUnmounted, watch } from 'vue'
 import { submitGenerationTask, getTaskStatus } from '@/api/creation/generation'
 import { ElMessage } from 'element-plus'
 import { MagicStick, DocumentCopy, Picture, VideoCamera, PictureFilled, UploadFilled, VideoPlay, Download, Refresh } from '@element-plus/icons-vue'
@@ -329,6 +333,21 @@ const form = reactive({
   }
 })
 
+const availableDurations = computed(() => {
+  if (form.modelName === 'Minimax') return [6, 10]
+  if (form.modelName === 'Doubao Seedance') return [5, 10]
+  return [5, 10] // Kling and others
+})
+
+// 监听模型变化，重置时长为合法值
+watch(() => form.modelName, (newVal) => {
+  if (newVal === 'Minimax' && !availableDurations.value.includes(form.inputConfig.duration)) {
+    form.inputConfig.duration = 6
+  } else if (!availableDurations.value.includes(form.inputConfig.duration)) {
+    form.inputConfig.duration = 5
+  }
+})
+
 // 监听标签页切换
 const onTabChange = () => {
   form.taskType = activeTab.value
@@ -347,7 +366,7 @@ const onTabChange = () => {
 }
 
 // 监听 activeTab 变化
-import { watch } from 'vue'
+// 监听 activeTab 变化
 watch(activeTab, onTabChange)
 
 // 图片上传
@@ -422,7 +441,7 @@ const startPolling = () => {
     } catch (error) {
       console.error('轮询错误:', error)
     }
-  }, 4000)
+  }, 5000)
 }
 
 // 停止轮询

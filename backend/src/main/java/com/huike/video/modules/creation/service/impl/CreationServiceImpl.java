@@ -120,33 +120,53 @@ public class CreationServiceImpl implements CreationService {
         aiTaskMapper.insert(task);
 
         // 5. 调用策略执行
-        try {
-            CreationResponse response = strategyManager.executeGeneration(request);
+        // 5. 异步调用策略执行
+        creationTaskExecutor.execute(() -> {
+            try {
+                CreationResponse response = strategyManager.executeGeneration(request);
 
-            // 6. 更新任务状态
-            if (response.getTaskId() != null) {
-                // 第三方异步任务 ID
-                task.setExternalTaskId(response.getTaskId());
-                task.setStatus(STATUS_PROCESSING);
-            } else if (response.getMediaUrl() != null) {
-                // 同步返回了结果 (极少见，除非是快速模型)
-                task.setResultFilePath(response.getMediaUrl());
-                task.setStatus(STATUS_SUCCESS);
+                // 6. 更新任务状态
+                if (response.getTaskId() != null) {
+                    // 第三方异步任务 ID
+                    task.setExternalTaskId(response.getTaskId());
+                    task.setStatus(STATUS_PROCESSING);
+                } else {
+                    // 同步返回了结果 (如文生文)
+                    task.setStatus(STATUS_SUCCESS);
+                    task.setEndTime(LocalDateTime.now());
+                    
+                    if (response.getMediaUrl() != null) {
+                        task.setResultFilePath(response.getMediaUrl());
+                    }
+                    if (response.getContent() != null) {
+                         // 将文本结果存入 outputConfig
+                         Map<String, Object> output = task.getOutputConfig();
+                         if (output == null) output = new HashMap<>();
+                         output.put("content", response.getContent());
+                         task.setOutputConfig(output);
+                    }
+                    // token usage check
+                    if (response.getUsageTokens() != null) {
+                        task.setCostToken(BigDecimal.valueOf(response.getUsageTokens()));
+                    }
+                }
+                
+                aiTaskMapper.updateById(task);
 
+            } catch (Exception e) {
+                log.error("Async Task execution failed for task {}", taskId, e);
+                task.setStatus(STATUS_FAILED);
+                task.setErrorMessage(e.getMessage());
                 task.setEndTime(LocalDateTime.now());
+                aiTaskMapper.updateById(task);
+                // 退款
+                try {
+                    walletService.refundBalance(userId, cost, taskId, "任务执行失败退款");
+                } catch (Exception ex) {
+                    log.error("Refund failed for task {}", taskId, ex);
+                }
             }
-            
-            aiTaskMapper.updateById(task);
-
-        } catch (Exception e) {
-            log.error("Task execution failed", e);
-            task.setStatus(STATUS_FAILED);
-            task.setErrorMessage(e.getMessage());
-            aiTaskMapper.updateById(task);
-            // 退款
-            walletService.refundBalance(userId, cost, taskId, "任务执行失败退款");
-            throw new BusinessException(500, "任务执行失败: " + e.getMessage());
-        }
+        });
 
         return taskId;
     }

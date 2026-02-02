@@ -22,7 +22,7 @@ export function loginByPassword(account, password) {
   return request({
     url: '/auth/login',
     method: 'post',
-    data: { account, password }
+    data: { username: account, password }
   }).then(res => {
     // 存储token信息
     if (res.data) {

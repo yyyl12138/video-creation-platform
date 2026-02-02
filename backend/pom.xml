@@ -129,22 +129,17 @@
             <scope>test</scope>
         </dependency>
 
-         <!-- 短信业务配置模块 -->    
+         <!-- 短信业务配置模块 (阿里云号码认证服务) -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>alibabacloud-dypnsapi20170525</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+         <!-- Darabonba 核心依赖 -->
          <dependency>
-             <!-- 阿里云Java SDK核心库，提供与阿里云服务通信的基础能力 -->
-             <!-- 包含HTTP客户端、请求签名、异常处理、配置管理等核心功能 -->
-             <!-- 版本4.7.0，是所有阿里云Java SDK的依赖基础 -->
              <groupId>com.aliyun</groupId>
-             <artifactId>aliyun-java-sdk-core</artifactId>
-             <version>4.7.0</version>
-         </dependency>
-         <dependency>
-             <!-- 阿里云短信服务(DYSMS)专用SDK，基于核心库构建 -->
-             <!-- 封装了短信发送、查询、模板管理等API调用 -->
-             <!-- 项目通过此SDK实现验证码、通知等短信发送功能 -->
-             <groupId>com.aliyun</groupId>
-             <artifactId>aliyun-java-sdk-dysmsapi</artifactId>
-             <version>2.2.1</version>
+             <artifactId>tea-openapi</artifactId>
+             <version>0.3.6</version>
          </dependency>
              
     </dependencies>

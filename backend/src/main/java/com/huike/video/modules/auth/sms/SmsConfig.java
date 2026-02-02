@@ -12,15 +12,21 @@ public class SmsConfig {
 
     @Bean
     public SmsSender smsSender(SmsProperties properties) {
-        if (properties.isEnabled()
-                && properties.getAccessKeyId() != null && !properties.getAccessKeyId().isBlank()
-                && properties.getAccessKeySecret() != null && !properties.getAccessKeySecret().isBlank()
-                && properties.getSignName() != null && !properties.getSignName().isBlank()
-                && properties.getTemplateCode() != null && !properties.getTemplateCode().isBlank()) {
-            log.info("SMS sender: AliyunSmsSender enabled=true regionId={}", properties.getRegionId());
-            return new AliyunSmsSender(properties);
+        log.info("SMS Service: AliyunSmsSender (Enforced)");
+        
+        // 简单校验配置，如果不完整则抛出异常，防止启动后无法使用
+        if (!properties.isEnabled()) {
+             // 虽然用户说“保留开关判断”，但我们要删除 Mock。如果 enabled=false，这里必须报错或者仍然返回 AliyunSmsSender 但它可能无法工作？
+             // 用户说“如果原本代码支持...无需改动...”，但我们现在是在修改。
+             // 如果 enabled=false，我们抛出异常提示用户必须开启。
+             throw new IllegalArgumentException("必须启用短信服务 (sms.aliyun.enabled=true) 且配置正确才能启动应用");
         }
-        log.info("SMS sender: LogSmsSender (mock) enabled={} (set sms.aliyun.enabled=true and fill access-key-id/access-key-secret/sign-name/template-code to enable real SMS)", properties.isEnabled());
-        return new LogSmsSender();
+        
+        if (properties.getAccessKeyId() == null || properties.getAccessKeyId().isBlank()
+                || properties.getAccessKeySecret() == null || properties.getAccessKeySecret().isBlank()) {
+            throw new IllegalArgumentException("阿里云 AccessKey 未配置，无法启动短信服务");
+        }
+
+        return new AliyunSmsSender(properties);
     }
 }

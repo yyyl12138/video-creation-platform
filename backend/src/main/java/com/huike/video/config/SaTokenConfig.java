@@ -30,7 +30,25 @@ public class SaTokenConfig implements WebMvcConfigurer {
 //
 //                        // 静态资源
 //                        "/profile/upload/**",
-//                        "/favicon.ico"
+//                        "/favicon.ico",
+//                        "/storage/**"
 //                );
+    }
+    
+    /**
+     * 注册 [Sa-Token全局过滤器]
+     */
+    @org.springframework.context.annotation.Bean
+    public cn.dev33.satoken.filter.SaServletFilter getSaServletFilter() {
+        return new cn.dev33.satoken.filter.SaServletFilter()
+                .addInclude("/**")
+                .addExclude("/favicon.ico", "/doc.html", "/webjars/**", "/swagger-resources/**", "/v3/api-docs/**", "/storage/**")
+                .setAuth(obj -> {
+                    // 校验 Same-Token 身份凭证
+                    // SaSameUtil.checkCurrentRequestToken();
+                })
+                .setError(e -> {
+                    return cn.dev33.satoken.util.SaResult.error(e.getMessage());
+                });
     }
 }

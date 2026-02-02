@@ -82,6 +82,12 @@ public class GenerationController {
             result.put("fileUrl", task.getResultFilePath());
             result.put("coverUrl", task.getResultCoverPath());
             result.put("size", task.getResultFileSize());
+            
+            // 返回文本生成结果
+            if (task.getOutputConfig() != null && task.getOutputConfig().containsKey("content")) {
+                result.put("content", task.getOutputConfig().get("content"));
+            }
+            
             response.put("result", result);
         }
 

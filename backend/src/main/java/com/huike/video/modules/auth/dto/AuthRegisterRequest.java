@@ -13,7 +13,6 @@ public class AuthRegisterRequest {
     @Size(min = 4, max = 20, message = "username长度必须在4-20之间")
     private String username;
 
-    @NotBlank(message = "email不能为空")
     @Email(message = "email格式不正确")
     private String email;
 
@@ -25,4 +24,6 @@ public class AuthRegisterRequest {
 
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone格式不正确")
     private String phone;
+
+    private String code;
 }

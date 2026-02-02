@@ -6,7 +6,9 @@ import com.huike.video.common.exception.BusinessException;
 import com.huike.video.modules.auth.dto.AuthLoginRequest;
 import com.huike.video.modules.auth.dto.AuthRegisterRequest;
 import com.huike.video.modules.auth.dto.AuthSwitchRoleRequest;
+import com.huike.video.modules.auth.dto.SendCodeRequest;
 import com.huike.video.modules.auth.service.AuthService;
+import com.huike.video.modules.auth.service.VerificationCodeService;
 import com.huike.video.modules.auth.vo.AuthLoginResponse;
 import com.huike.video.modules.auth.vo.AuthRegisterResponse;
 import com.huike.video.modules.auth.vo.AuthSwitchRoleResponse;
@@ -39,20 +41,28 @@ public class AuthServiceImpl implements AuthService {
     private final RoleService roleService;
     private final RoleMapper roleMapper;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final VerificationCodeService verificationCodeService;
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     @Transactional
     public AuthRegisterResponse register(AuthRegisterRequest request) {
+        // 验证验证码
+        if (!verificationCodeService.verifyCode(request.getPhone(), "register", request.getCode())) {
+            throw new BusinessException(10006, "验证码错误或已过期");
+        }
+
         Long usernameCount = userMapper.countByUsername(request.getUsername());
         if (usernameCount != null && usernameCount > 0) {
             throw new BusinessException(10003, "用户名已存在");
         }
 
-        Long emailCount = userMapper.countByEmail(request.getEmail());
-        if (emailCount != null && emailCount > 0) {
-            throw new BusinessException(10004, "邮箱已存在");
+        if (request.getEmail() != null) {
+            Long emailCount = userMapper.countByEmail(request.getEmail());
+            if (emailCount != null && emailCount > 0) {
+                throw new BusinessException(10004, "邮箱已存在");
+            }
         }
 
         String userId = generateUserId();
@@ -88,10 +98,25 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(50001, "服务繁忙");
         }
 
+        // 自动登录
+        StpUtil.login(user.getId());
+
         AuthRegisterResponse response = new AuthRegisterResponse();
         response.setUserId(userId);
         response.setUsername(user.getUsername());
         response.setRegisterTime(LocalDateTime.now().format(DATETIME_FORMATTER));
+        
+        response.setToken(StpUtil.getTokenValue());
+        response.setRefreshToken(StpUtil.getTokenValue());
+        response.setExpireIn(StpUtil.getTokenTimeout());
+        
+        AuthLoginResponse.UserInfo userInfo = new AuthLoginResponse.UserInfo();
+        userInfo.setUserId(user.getId());
+        userInfo.setUsername(user.getUsername());
+        userInfo.setAvatarUrl(user.getAvatarUrl());
+        userInfo.setRoles(getRoleNames(user.getRoleId()));
+        response.setUserInfo(userInfo);
+
         return response;
     }
 
@@ -182,21 +207,89 @@ public class AuthServiceImpl implements AuthService {
     // ========== 新增方法 (TODO: 完善业务逻辑) ==========
 
     @Override
-    public Boolean sendCode(com.huike.video.modules.auth.dto.SendCodeRequest request) {
-        // TODO: 实现发送验证码逻辑
-        return true;
+    public Boolean sendCode(SendCodeRequest request) {
+        return verificationCodeService.sendCode(request.getTarget(), request.getType());
     }
 
     @Override
+    @Transactional
     public AuthLoginResponse loginBySms(com.huike.video.modules.auth.dto.LoginBySmsRequest request) {
-        // TODO: 实现短信登录逻辑
-        throw new BusinessException(50001, "功能开发中");
+        // 1. 校验验证码 (作为注册流程，使用 REGISTER 类型)
+        if (!verificationCodeService.verifyCode(request.getPhone(), "REGISTER", request.getCode())) {
+            throw new BusinessException(10006, "验证码错误或已过期");
+        }
+
+        // 2. 查询用户
+        User user = userMapper.selectByPhone(request.getPhone());
+
+        // 3. 用户若已存在，则提示直接登录 (注册仅限新用户)
+        if (user != null) {
+             throw new BusinessException(10003, "手机号已注册，请使用密码登录");
+        }
+
+        // 4. 用户不存在则自动注册
+        String userId = generateUserId();
+        user = new User();
+        user.setId(userId);
+        // 生成默认用户名: M + 手机号后4位 + 随机4位
+        String suffix = request.getPhone().length() >= 4 ? request.getPhone().substring(request.getPhone().length() - 4) : "0000";
+        user.setUsername("M" + suffix + (new Random().nextInt(9000) + 1000));
+        // 设置随机初始密码 (用户不可知，必须通过验证码重置或设置)
+        user.setPasswordHash(passwordEncoder.encode(generateRandomPassword()));
+        user.setPhone(request.getPhone());
+        user.setEmail(null); // 短信登录不强制邮箱
+        user.setStatus(1);
+        user.setRoleId(1L); // 默认为普通用户
+        
+        userMapper.insert(user);
+        
+        // 创建钱包
+        UserWallet wallet = new UserWallet();
+        wallet.setId(generateWalletId());
+        wallet.setUserId(userId);
+        wallet.setBalance(BigDecimal.ZERO);
+        wallet.setTotalRecharged(BigDecimal.ZERO);
+        wallet.setTotalConsumed(BigDecimal.ZERO);
+        userWalletMapper.insert(wallet);
+
+
+        // 5. 执行登录 (SotToken)
+        StpUtil.login(user.getId());
+
+        // 6. 构建响应
+        AuthLoginResponse response = new AuthLoginResponse();
+        response.setToken(StpUtil.getTokenValue());
+        response.setRefreshToken(StpUtil.getTokenValue());
+        response.setExpireIn(StpUtil.getTokenTimeout());
+
+        AuthLoginResponse.UserInfo userInfo = new AuthLoginResponse.UserInfo();
+        userInfo.setUserId(user.getId());
+        userInfo.setUsername(user.getUsername());
+        userInfo.setAvatarUrl(user.getAvatarUrl());
+        userInfo.setRoles(getRoleNames(user.getRoleId())); 
+
+        response.setUserInfo(userInfo);
+        return response;
     }
 
     @Override
     public Boolean resetPassword(com.huike.video.modules.auth.dto.ResetPasswordRequest request) {
-        // TODO: 实现密码重置逻辑
-        throw new BusinessException(50001, "功能开发中");
+        // 1. 校验验证码
+        if (!verificationCodeService.verifyCode(request.getTarget(), "RESET_PWD", request.getCode())) {
+            throw new BusinessException(10006, "验证码错误或已过期");
+        }
+
+        // 2. 查询用户
+        User user = userMapper.selectByPhone(request.getTarget());
+        if (user == null) {
+            throw new BusinessException(10004, "用户不存在");
+        }
+
+        // 3. 更新密码
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userMapper.updateById(user);
+
+        return true;
     }
 
     @Override
@@ -213,5 +306,18 @@ public class AuthServiceImpl implements AuthService {
     public Boolean logout() {
         StpUtil.logout();
         return true;
+    }
+
+    /**
+     * 生成随机密码
+     */
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < 12; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }

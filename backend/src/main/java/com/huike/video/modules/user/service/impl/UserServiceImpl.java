@@ -178,7 +178,7 @@ public class UserServiceImpl implements UserService {
         // 使用工具类上传文件
         String avatarUrl;
         try {
-            avatarUrl = FileStorageUtils.uploadFileWithFullUrl(file, "avatar", userId, baseUrl);
+            avatarUrl = FileStorageUtils.uploadFile(file, "avatar", userId);
         } catch (IOException e) {
             throw new BusinessException(50001, "头像保存失败: " + e.getMessage());
         }
