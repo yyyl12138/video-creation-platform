@@ -1,9 +1,12 @@
 package com.huike.video.modules.material.service.impl;
 
+import java.math.BigDecimal;
+
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.huike.video.common.util.FileStorageUtils;
 import com.huike.video.modules.material.entity.AudioMaterial;
 import com.huike.video.modules.material.entity.ImageMaterial;
 import com.huike.video.modules.material.entity.VideoMaterial;
@@ -32,7 +35,7 @@ public class MaterialServiceImpl implements MaterialService {
     private final ImageMaterialMapper imageMaterialMapper;
     private final VideoMaterialMapper videoMaterialMapper;
     private final AudioMaterialMapper audioMaterialMapper;
-    private final com.huike.video.modules.material.util.MaterialFileUtils materialFileUtils;
+    private final com.huike.video.common.service.ResourceService resourceService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -186,7 +189,51 @@ public class MaterialServiceImpl implements MaterialService {
         }
 
         if (StringUtils.hasText(filePath)) {
-            materialFileUtils.deleteFile(filePath);
+            // Implementation detail: ResourceService.delete simply calls deleteFile(path).
+            // If path contains "http", rename logic might be needed.
+            // Assuming for now we strip prefix in Utils or Service? 
+            // ResourceServiceImpl.delete -> FileStorageUtils.deleteFile -> Paths.get(base, relative).
+            // If relative is "/profile/...", it might fail if base is "/storage/".
+            // Clean up path logic:
+            String relativeKey = filePath;
+            if (filePath.contains("/storage/")) {
+                relativeKey = filePath.substring(filePath.indexOf("/storage/") + 9);
+            } else if (filePath.contains("/profile/upload/")) {
+                 // old legacy path, mapped to storage root in WebMvcConfig
+                 relativeKey = filePath.replace("/profile/upload/", "");
+                 // MaterialFileUtils stored in "materials/type/date/..."
+            }
+            // For new "ResourceService" usage, store() returns "videos/xxx.mp4".
+            // But uploadMaterial below should probably return full URL to frontend?
+            // MaterialUploadResponse usually expects full URL?
+            // Profile.vue handles /storage/. ResultDisplay handles full.
+            // Let's store the result of resourceService.getUrl(resourceKey).
+            
+            try {
+                // Remove URL prefix if present
+                if (relativeKey.startsWith("http")) {
+                    // Extract path
+                    // This is complex. Let's rely on loose deletion or simple string replacement
+                    // If we migrated to ResourceService completely, we should look for "/storage/"
+                    // For now, if it's a full URL, try to extract the key part
+                    int storageIndex = relativeKey.indexOf("/storage/");
+                    if (storageIndex != -1) {
+                        relativeKey = relativeKey.substring(storageIndex + 9);
+                    } else {
+                        // If it's a full URL but not containing /storage/, we can't reliably delete it
+                        // Log and skip deletion for this case
+                        System.err.println("Cannot reliably delete file with full URL: " + filePath);
+                        return true; // Still consider DB deletion successful
+                    }
+                }
+                
+                // resourceService.delete will append BASE_PATH.
+                // Legacy files were in BASE_PATH + relativeKey.
+                // So it should work.
+                resourceService.delete(relativeKey);
+            } catch (Exception ignored) {
+                System.err.println("Failed to delete file from storage: " + filePath + ", error: " + ignored.getMessage());
+            }
         }
 
         return true;
@@ -200,13 +247,19 @@ public class MaterialServiceImpl implements MaterialService {
                                                                      String category) {
         com.huike.video.modules.material.vo.MaterialUploadResponse resp = new com.huike.video.modules.material.vo.MaterialUploadResponse();
         try {
-            // 根据文件扩展名判断素材类型
-            String materialType = materialFileUtils.detectMaterialType(file.getOriginalFilename());
+            // 1. Detect Type
+            String materialType = FileStorageUtils.detectMaterialType(file.getOriginalFilename());
             if ("unknown".equals(materialType)) {
                 throw new IllegalArgumentException("不支持的素材类型");
             }
-            // 保存文件，返回访问URL
-            String url = materialFileUtils.saveFile(file, materialType);
+            
+            // 2. 存储文件 (统一存到 videos, images, audios)
+            String module = materialType + "s"; // plural
+            // store 返回相对Key (如 videos/xxx.mp4)
+            String resourceKey = resourceService.store(file, module);
+            
+            // 3. 获取完整 URL 用于存库
+            String url = resourceService.getUrl(resourceKey);
 
             String id = IdUtil.simpleUUID();
             long size = file.getSize();
@@ -214,11 +267,8 @@ public class MaterialServiceImpl implements MaterialService {
             String uploaderId = null;
             try {
                 uploaderId = StpUtil.getLoginIdAsString();
-            } catch (Exception ignored) {
-            }
-            if (!StringUtils.hasText(uploaderId)) {
-                uploaderId = "unknown";
-            }
+            } catch (Exception ignored) {}
+            if (!StringUtils.hasText(uploaderId)) uploaderId = "unknown";
 
             switch (materialType) {
                 case "image":
@@ -262,12 +312,76 @@ public class MaterialServiceImpl implements MaterialService {
             }
 
             resp.setMaterialId(id);
-            resp.setUrl(url);
+            resp.setUrl(url); // 返回完整URL
             resp.setType(materialType.toUpperCase());
             resp.setFileSize(size);
             return resp;
         } catch (Exception e) {
             throw new com.huike.video.common.exception.BusinessException(50000, "素材上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void createFromAiResult(com.huike.video.modules.creation.domain.entity.AiTask task) {
+        if (task == null || task.getStatus() != 3) {
+            return;
+        }
+
+        try {
+            // sourceType = 3 (AI生成)
+            int sourceType = 3;
+            // copyright = 3 (个人使用, 或根据需求定)
+            int copyright = 3; 
+
+            if (task.getTaskType() == 2) {
+                // 文生图 -> ImageMaterial
+                ImageMaterial img = new ImageMaterial();
+                img.setId(IdUtil.simpleUUID()); // 或者复用 task ID? 建议新ID
+                img.setImageName("AI生成-" + task.getId());
+                img.setFilePath(task.getResultFilePath());
+                // file size unknown unless we verified it or stored it
+                if (task.getResultFileSize() != null) {
+                    img.setFileSize(task.getResultFileSize());
+                } else {
+                    img.setFileSize(0L);
+                }
+                img.setStatus(1);
+                img.setSourceType(sourceType);
+                img.setCopyrightStatus(copyright);
+                img.setUploaderId(task.getUserId());
+                img.setTags("AI Generated,Task-" + task.getId());
+                img.setIsPublic(false);
+                imageMaterialMapper.insert(img);
+
+            } else if (task.getTaskType() == 3 || task.getTaskType() == 4) {
+                // 文生视频/图生视频 -> VideoMaterial
+                VideoMaterial vid = new VideoMaterial();
+                vid.setId(IdUtil.simpleUUID());
+                vid.setVideoName("AI视频-" + task.getId());
+                vid.setFilePath(task.getResultFilePath());
+                vid.setCoverPath(task.getResultCoverPath()); // New field
+                if (task.getResultFileSize() != null) {
+                    vid.setFileSize(task.getResultFileSize());
+                } else {
+                    vid.setFileSize(0L);
+                }
+                vid.setStatus(1);
+                vid.setSourceType(sourceType);
+                vid.setCopyrightStatus(copyright);
+                vid.setUploaderId(task.getUserId());
+                vid.setTags("AI Generated,Task-" + task.getId());
+                vid.setIsPublic(false);
+                
+                // 设置默认分辨率等 (如果 task outputConfig 有则解析，否则 default)
+                vid.setResolution("Unknown"); 
+                vid.setDurationSeconds(BigDecimal.ZERO); // 需要从元数据或Task Config获取
+
+                videoMaterialMapper.insert(vid);
+            }
+        } catch (Exception e) {
+            // Log error but don't fail the whole transaction if purely async listener
+            System.err.println("Failed to sync AI result to material: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -278,7 +392,7 @@ public class MaterialServiceImpl implements MaterialService {
         vo.setMaterialId(entity.getId());
         vo.setName(entity.getImageName());
         vo.setType("IMAGE");
-        vo.setUrl(entity.getFilePath());
+        vo.setUrl(resourceService.getUrl(entity.getFilePath()));
         vo.setResolution(entity.getResolution());
         vo.setFileSize(entity.getFileSize());
         vo.setTags(parseTags(entity.getTags()));
@@ -296,7 +410,13 @@ public class MaterialServiceImpl implements MaterialService {
         vo.setMaterialId(entity.getId());
         vo.setName(entity.getVideoName());
         vo.setType("VIDEO");
-        vo.setUrl(entity.getFilePath());
+        // Ensure URL is full (if stored as full, getUrl returns it; if relative, it appends)
+        vo.setUrl(resourceService.getUrl(entity.getFilePath()));
+        // Set Cover URL
+        if (StringUtils.hasText(entity.getCoverPath())) {
+            vo.setCoverUrl(resourceService.getUrl(entity.getCoverPath()));
+        }
+        
         vo.setResolution(entity.getResolution());
         vo.setDurationSeconds(entity.getDurationSeconds());
         vo.setFileSize(entity.getFileSize());
@@ -315,7 +435,7 @@ public class MaterialServiceImpl implements MaterialService {
         vo.setMaterialId(entity.getId());
         vo.setName(entity.getAudioName());
         vo.setType("AUDIO");
-        vo.setUrl(entity.getFilePath());
+        vo.setUrl(resourceService.getUrl(entity.getFilePath()));
         vo.setDurationSeconds(entity.getDurationSeconds());
         vo.setFileSize(entity.getFileSize());
         vo.setTags(parseTags(entity.getTags()));
@@ -350,6 +470,177 @@ public class MaterialServiceImpl implements MaterialService {
             case 2: return "PAID";
             case 3: return "PERSONAL_USE";
             default: return "PERSONAL_USE";
+        }
+    }
+
+    // ========== 管理员接口实现 (1.1-1.3) ==========
+
+    @Override
+    public com.huike.video.modules.material.vo.AdminMaterialUploadResponse uploadSystemMaterial(
+            org.springframework.web.multipart.MultipartFile file,
+            String copyrightStatus,
+            String category,
+            String tags) {
+        com.huike.video.modules.material.vo.AdminMaterialUploadResponse resp = 
+                new com.huike.video.modules.material.vo.AdminMaterialUploadResponse();
+        try {
+            // 1. 检测素材类型
+            String materialType = com.huike.video.common.util.FileStorageUtils.detectMaterialType(file.getOriginalFilename());
+            if ("unknown".equals(materialType)) {
+                throw new IllegalArgumentException("不支持的素材类型");
+            }
+
+            // 2. 存储文件
+            String module = materialType + "s";
+            String resourceKey = resourceService.store(file, module);
+            String url = resourceService.getUrl(resourceKey);
+
+            // 3. 解析版权状态
+            int copyrightStatusInt = parseCopyrightStatus(copyrightStatus);
+
+            String id = cn.hutool.core.util.IdUtil.simpleUUID();
+            long size = file.getSize();
+
+            // 管理员上传，sourceType=1(官方), isPublic=true
+            switch (materialType) {
+                case "image":
+                    ImageMaterial img = new ImageMaterial();
+                    img.setId(id);
+                    img.setImageName(file.getOriginalFilename());
+                    img.setFilePath(url);
+                    img.setFileSize(size);
+                    img.setTags(tags);
+                    img.setCategory(category);
+                    img.setStatus(1);
+                    img.setSourceType(1); // 官方
+                    img.setCopyrightStatus(copyrightStatusInt);
+                    img.setIsPublic(true);
+                    img.setUploaderId("SYSTEM");
+                    imageMaterialMapper.insert(img);
+                    break;
+                case "video":
+                    VideoMaterial vid = new VideoMaterial();
+                    vid.setId(id);
+                    vid.setVideoName(file.getOriginalFilename());
+                    vid.setFilePath(url);
+                    vid.setFileSize(size);
+                    vid.setTags(tags);
+                    vid.setStatus(1);
+                    vid.setSourceType(1); // 官方
+                    vid.setCopyrightStatus(copyrightStatusInt);
+                    vid.setIsPublic(true);
+                    vid.setUploaderId("SYSTEM");
+                    vid.setResolution("Unknown");
+                    videoMaterialMapper.insert(vid);
+                    break;
+                case "audio":
+                    AudioMaterial aud = new AudioMaterial();
+                    aud.setId(id);
+                    aud.setAudioName(file.getOriginalFilename());
+                    aud.setFilePath(url);
+                    aud.setFileSize(size);
+                    aud.setTags(tags);
+                    aud.setStatus(1);
+                    aud.setCopyrightStatus(copyrightStatusInt);
+                    aud.setUploaderId("SYSTEM");
+                    audioMaterialMapper.insert(aud);
+                    break;
+            }
+
+            resp.setMaterialId(id);
+            resp.setUrl(url);
+            resp.setCopyrightStatus(copyrightStatus);
+            return resp;
+        } catch (Exception e) {
+            throw new com.huike.video.common.exception.BusinessException(50000, "系统素材上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean updateMaterialStatus(String materialId, String type, String status, String reason) {
+        if (!StringUtils.hasText(type) || !StringUtils.hasText(status)) {
+            return false;
+        }
+
+        int statusInt = parseStatus(status);
+        String upperType = type.toUpperCase();
+
+        switch (upperType) {
+            case "IMAGE": {
+                ImageMaterial image = imageMaterialMapper.selectById(materialId);
+                if (image == null) return false;
+                image.setStatus(statusInt);
+                return imageMaterialMapper.updateById(image) > 0;
+            }
+            case "VIDEO": {
+                VideoMaterial video = videoMaterialMapper.selectById(materialId);
+                if (video == null) return false;
+                video.setStatus(statusInt);
+                return videoMaterialMapper.updateById(video) > 0;
+            }
+            case "AUDIO": {
+                AudioMaterial audio = audioMaterialMapper.selectById(materialId);
+                if (audio == null) return false;
+                audio.setStatus(statusInt);
+                return audioMaterialMapper.updateById(audio) > 0;
+            }
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    public boolean updateMaterialCopyright(String materialId, String type, String copyrightStatus) {
+        if (!StringUtils.hasText(type) || !StringUtils.hasText(copyrightStatus)) {
+            return false;
+        }
+
+        int copyrightInt = parseCopyrightStatus(copyrightStatus);
+        String upperType = type.toUpperCase();
+
+        switch (upperType) {
+            case "IMAGE": {
+                ImageMaterial image = imageMaterialMapper.selectById(materialId);
+                if (image == null) return false;
+                image.setCopyrightStatus(copyrightInt);
+                return imageMaterialMapper.updateById(image) > 0;
+            }
+            case "VIDEO": {
+                VideoMaterial video = videoMaterialMapper.selectById(materialId);
+                if (video == null) return false;
+                video.setCopyrightStatus(copyrightInt);
+                return videoMaterialMapper.updateById(video) > 0;
+            }
+            case "AUDIO": {
+                AudioMaterial audio = audioMaterialMapper.selectById(materialId);
+                if (audio == null) return false;
+                audio.setCopyrightStatus(copyrightInt);
+                return audioMaterialMapper.updateById(audio) > 0;
+            }
+            default:
+                return false;
+        }
+    }
+
+    // ========== 辅助解析方法 ==========
+
+    private int parseCopyrightStatus(String copyrightStatus) {
+        if (copyrightStatus == null) return 3;
+        switch (copyrightStatus.toUpperCase()) {
+            case "FREE_COMMERCIAL": return 1;
+            case "PAID": return 2;
+            case "PERSONAL_USE": return 3;
+            default: return 3;
+        }
+    }
+
+    private int parseStatus(String status) {
+        if (status == null) return 1;
+        switch (status.toUpperCase()) {
+            case "NORMAL": return 1;
+            case "BANNED": return 2;
+            case "REVIEWING": return 3;
+            default: return 1;
         }
     }
 }

@@ -53,76 +53,97 @@ public class FileStorageUtils {
         return BASE_STORAGE_PATH;
     }
 
-    // ==================== 上传相关方法 ====================
+    // ==================== 上传/存储 ====================
 
     /**
-     * 上传 MultipartFile 文件到指定子目录
-     * @param file 上传的文件
-     * @param subDir 子目录 (如 "avatar", "images", "videos")
-     * @param fileNamePrefix 文件名前缀 (如 userId)
-     * @return 可用于访问的相对路径 (如 /storage/avatar/u123_1704067200.jpg)
-     * @throws IOException 文件写入失败
+     * 上传 MultipartFile 文件
+     * @param file 文件
+     * @param subDir 子目录
+     * @param fileNamePrefix 文件名前缀
+     * @return 存储的相对路径 (subDir/filename)
      */
     public static String uploadFile(MultipartFile file, String subDir, String fileNamePrefix) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("上传文件不能为空");
         }
 
-        // 提取文件扩展名
         String ext = extractExtension(file.getOriginalFilename());
-        if (!StringUtils.hasText(ext)) {
-            ext = ".bin";
-        }
+        if (!StringUtils.hasText(ext)) ext = ".bin";
 
-        // 生成唯一文件名
         String fileName = fileNamePrefix + "_" + System.currentTimeMillis() + ext;
-
-        // 构建目标路径
-        String targetDir = BASE_STORAGE_PATH;
-        if (StringUtils.hasText(subDir)) {
-            targetDir += subDir + File.separator;
-        }
-
-        Path targetPath = Paths.get(targetDir, fileName);
+        Path targetPath = resolvePath(subDir, fileName);
         
-        // 确保目录存在
         Files.createDirectories(targetPath.getParent());
-        
-        // 写入文件
         file.transferTo(targetPath);
-        log.info("文件上传成功: {} ({}字节)", targetPath, file.getSize());
+        log.info("文件写入成功: {} ({} bytes)", targetPath, file.getSize());
 
-        // 返回相对访问路径
-        String relativePath = "/storage/";
-        if (StringUtils.hasText(subDir)) {
-            relativePath += subDir + "/";
-        }
-        return relativePath + fileName;
+        return getRelativeKey(subDir, fileName);
     }
 
     /**
-     * 上传文件并返回完整 URL
-     * @param file 上传的文件
+     * 下载远程文件
+     * @param url 远程URL
+     * @param fileName 目标文件名
      * @param subDir 子目录
-     * @param fileNamePrefix 文件名前缀
-     * @param baseUrl 服务器基础URL (如 http://localhost:8080)
-     * @return 完整访问 URL
-     * @throws IOException 文件写入失败
+     * @return 存储的相对路径 (subDir/filename)
      */
-    public static String uploadFileWithFullUrl(MultipartFile file, String subDir, String fileNamePrefix, String baseUrl) throws IOException {
-        String relativePath = uploadFile(file, subDir, fileNamePrefix);
-        return (baseUrl != null ? baseUrl : "") + relativePath;
+    public static String downloadFile(String url, String fileName, String subDir) {
+        if (!StringUtils.hasText(url)) return null;
+
+        try {
+            Path targetPath = resolvePath(subDir, fileName);
+            File destFile = targetPath.toFile();
+
+            if (destFile.exists() && destFile.length() > 0) {
+                log.info("文件已存在，跳过下载: {}", targetPath);
+                return getRelativeKey(subDir, fileName);
+            }
+
+            Files.createDirectories(targetPath.getParent());
+            log.info("正在下载 {} 到 {}", url, targetPath);
+            
+            long size = HttpUtil.downloadFile(url, destFile);
+            log.info("下载完成: {} bytes", size);
+
+            return getRelativeKey(subDir, fileName);
+
+        } catch (Exception e) {
+            log.error("下载文件失败: " + url, e);
+            throw new RuntimeException("下载失败: " + e.getMessage());
+        }
+    }
+
+    // ==================== 文件操作 ====================
+
+    /**
+     * 删除文件
+     * @param relativePath 相对路径 (subDir/filename)
+     */
+    public static boolean deleteFile(String relativePath) {
+        if (!StringUtils.hasText(relativePath)) return false;
+        try {
+            Path targetPath = Paths.get(BASE_STORAGE_PATH, relativePath);
+            boolean deleted = Files.deleteIfExists(targetPath);
+            log.info("删除文件: {} - {}", targetPath, deleted);
+            return deleted;
+        } catch (IOException e) {
+            log.warn("删除文件失败: {}", relativePath, e);
+            return false;
+        }
     }
 
     /**
-     * 从原始文件名中提取扩展名
-     * @param originalFilename 原始文件名
-     * @return 扩展名 (带点，如 ".jpg")，无扩展名则返回空字符串
+     * 检查文件是否存在
      */
+    public static boolean exists(String relativePath) {
+        if (!StringUtils.hasText(relativePath)) return false;
+        return Files.exists(Paths.get(BASE_STORAGE_PATH, relativePath));
+    }
+
+    // ==================== 辅助方法 ====================
+
     public static String extractExtension(String originalFilename) {
-        if (!StringUtils.hasText(originalFilename)) {
-            return "";
-        }
+        if (!StringUtils.hasText(originalFilename)) return "";
         int idx = originalFilename.lastIndexOf('.');
         if (idx >= 0 && idx < originalFilename.length() - 1) {
             return originalFilename.substring(idx);
@@ -131,89 +152,41 @@ public class FileStorageUtils {
     }
 
     /**
-     * 从 URL 下载文件到本地存储
-     * @param url 远程 URL
-     * @param fileName 目标文件名
-     * @param subDir 子目录名 (如 "images", "videos", "covers")
-     * @return 用于前端访问的相对路径
+     * 根据文件类型判断素材类型 (image/video/audio)
      */
-    public static String downloadFile(String url, String fileName, String subDir) {
-        if (!StringUtils.hasText(url)) return null;
-
-        try {
-            // 构建目标目录: 基础路径 + 子目录
-            String targetPath = BASE_STORAGE_PATH;
-            if (StringUtils.hasText(subDir)) {
-                targetPath += subDir + File.separator;
-            }
-
-            File destDir = new File(targetPath);
-            if (!destDir.exists()) {
-                boolean created = destDir.mkdirs();
-                if (!created) {
-                    log.warn("创建目录失败: {}", destDir.getAbsolutePath());
-                }
-            }
-
-            File destFile = new File(destDir, fileName);
-            log.info("正在下载 {} 到 {}", url, destFile.getAbsolutePath());
-            
-            long size = HttpUtil.downloadFile(url, destFile);
-            log.info("下载完成，文件大小: {} bytes", size);
-
-            // 返回相对路径，供前端通过静态资源映射访问
-            // 例如: /storage/videos/xxx.mp4
-            String relativePath = "/storage/";
-            if (StringUtils.hasText(subDir)) {
-                relativePath += subDir + "/";
-            }
-            return relativePath + fileName;
-
-        } catch (Exception e) {
-            log.error("下载文件失败: " + url, e);
-            throw new RuntimeException("下载失败: " + e.getMessage());
+    public static String detectMaterialType(String filename) {
+        String ext = extractExtension(filename).toLowerCase().replace(".", "");
+        
+        if (filename == null) return "unknown";
+        
+        // 图片类型
+        if (ext.matches("jpg|jpeg|png|gif|bmp|webp|svg")) {
+            return "image";
         }
+        // 视频类型
+        if (ext.matches("mp4|avi|mov|wmv|flv|mkv|webm|m4v")) {
+            return "video";
+        }
+        // 音频类型
+        if (ext.matches("mp3|wav|flac|aac|ogg|m4a|wma")) {
+            return "audio";
+        }
+        
+        return "unknown";
     }
 
-    /**
-     * 下载文件 (不指定子目录)
-     */
-    public static String downloadFile(String url, String fileName) {
-        return downloadFile(url, fileName, null);
-    }
-
-    /**
-     * 获取文件的完整本地路径
-     * @param subDir 子目录
-     * @param fileName 文件名
-     * @return 完整本地路径
-     */
-    public static String getFullPath(String subDir, String fileName) {
-        String path = BASE_STORAGE_PATH;
+    private static Path resolvePath(String subDir, String fileName) {
+        String dir = BASE_STORAGE_PATH;
         if (StringUtils.hasText(subDir)) {
-            path += subDir + File.separator;
+            dir += subDir + File.separator;
         }
-        return path + fileName;
+        return Paths.get(dir, fileName);
     }
 
-    /**
-     * 检查文件是否存在
-     */
-    public static boolean exists(String subDir, String fileName) {
-        return new File(getFullPath(subDir, fileName)).exists();
-    }
-
-    /**
-     * 删除文件
-     * @return true 如果删除成功或文件不存在
-     */
-    public static boolean deleteFile(String subDir, String fileName) {
-        File file = new File(getFullPath(subDir, fileName));
-        if (file.exists()) {
-            boolean deleted = file.delete();
-            log.info("删除文件 {} - {}", file.getAbsolutePath(), deleted ? "成功" : "失败");
-            return deleted;
+    private static String getRelativeKey(String subDir, String fileName) {
+        if (StringUtils.hasText(subDir)) {
+            return subDir + "/" + fileName;
         }
-        return true;
+        return fileName;
     }
 }

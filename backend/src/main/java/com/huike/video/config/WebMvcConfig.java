@@ -34,7 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // Windows 兼容：使用 file:/ 形式更稳定，且确保目录以 / 结尾
         String location = "file:/" + basePath.replace("\\", "/");
 
-        // 旧的上传路径映射 (兼容)
+        // 旧的上传路径映射 (兼容历史数据，不建议新业务使用)
         registry.addResourceHandler("/profile/upload/**")
                 .addResourceLocations(location);
 

@@ -24,6 +24,9 @@ public class MaterialVO {
     /** 访问URL */
     private String url;
 
+    /** 封面URL (视频专属) */
+    private String coverUrl;
+
     /** 分辨率 (图片/视频) */
     private String resolution;
 

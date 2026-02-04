@@ -16,7 +16,9 @@ import java.util.UUID;
 
 /**
  * 素材文件上传工具类
+ * @deprecated Use {@link com.huike.video.common.util.FileStorageUtils} instead.
  */
+@Deprecated
 @Slf4j
 @Component
 public class MaterialFileUtils {

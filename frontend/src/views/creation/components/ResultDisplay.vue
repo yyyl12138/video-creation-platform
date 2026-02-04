@@ -161,15 +161,7 @@ const downloadResult = () => {
 }
 
 const getFullUrl = (url) => {
-  if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
-  }
-  const baseUrl = import.meta.env.VITE_APP_BASE_API || ''
-  // 去除 baseUrl 结尾的 / 和 url 开头的 /，防止双斜杠
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
-  const cleanUrl = url.startsWith('/') ? url : '/' + url
-  return cleanBase + cleanUrl
+  return url || ''
 }
 </script>
 

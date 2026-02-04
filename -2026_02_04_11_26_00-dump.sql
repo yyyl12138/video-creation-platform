@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 9.2.0, for macos15 (arm64)
 --
--- Host: 127.0.0.1    Database: video_generation_platform
+-- Host: 121.43.193.225    Database: video_generation_platform
 -- ------------------------------------------------------
--- Server version	9.2.0
+-- Server version	8.0.36
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -23,25 +23,25 @@ DROP TABLE IF EXISTS `ai_generation_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ai_generation_tasks` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务任务ID)',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务任务ID)',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
   `task_type` tinyint NOT NULL COMMENT '任务类型: 1-文生文, 2-文生图, 3-文生视频, 4-文加图生视频',
-  `template_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联模板ID',
-  `prompt` text COLLATE utf8mb4_general_ci COMMENT '用户提示词',
-  `negative_prompt` text COLLATE utf8mb4_general_ci COMMENT '负面提示词',
+  `template_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联模板ID',
+  `prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '用户提示词',
+  `negative_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '负面提示词',
   `input_config` json NOT NULL COMMENT '输入配置',
   `output_config` json DEFAULT NULL COMMENT '输出配置',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-等待中, 2-处理中, 3-成功, 4-失败, 5-取消',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间/开始时间',
   `end_time` datetime DEFAULT NULL COMMENT '结束时间',
-  `result_file_path` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '结果文件路径(图片/视频)',
-  `result_cover_path` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '结果封面图路径',
+  `result_file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '结果文件路径(图片/视频)',
+  `result_cover_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '结果封面图路径',
   `result_file_size` bigint DEFAULT NULL COMMENT '结果文件大小',
-  `error_message` text COLLATE utf8mb4_general_ci COMMENT '错误信息',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '错误信息',
   `retry_count` int DEFAULT '0' COMMENT '重试次数',
   `priority` int DEFAULT '5' COMMENT '优先级',
   `model_id` bigint unsigned DEFAULT NULL COMMENT '模型ID',
-  `external_task_id` varchar(128) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '第三方任务ID',
+  `external_task_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '第三方任务ID',
   `cost_token` decimal(10,4) DEFAULT NULL COMMENT '消耗Token',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -55,7 +55,7 @@ CREATE TABLE `ai_generation_tasks` (
 
 LOCK TABLES `ai_generation_tasks` WRITE;
 /*!40000 ALTER TABLE `ai_generation_tasks` DISABLE KEYS */;
-INSERT INTO `ai_generation_tasks` VALUES ('1598cf40faf0412d9b1eca4a907ce207','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:50:20','2026-01-27 18:51:19','/creation_tasks/generations/1598cf40faf0412d9b1eca4a907ce207.mp4',NULL,NULL,NULL,0,5,7,'cgt-20260127185021-xn4tz',5.0000,0,'2026-01-27 18:50:20'),('21b1104af7b846eb8aab48d658be8720','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:44:10','2026-01-27 18:44:39',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127184411-x2tx9',5.0000,0,'2026-01-27 18:44:10'),('46bafecdb0d84c7baad73e94f7153324','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:39:48','2026-01-27 18:40:10',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183950-wd4z2',5.0000,0,'2026-01-27 18:39:48'),('488cb85d168d4b9999a3df9912722dbc','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"modelKey\": \"MiniMax-Hailuo-2.3\"}','{}',2,'2026-01-27 20:16:18',NULL,NULL,NULL,NULL,NULL,0,5,6,'360297697042820',5.0000,0,'2026-01-27 20:16:18'),('59a5bd2956264337b057e43c88f9ac11','test-user-001',2,NULL,'一只可爱的小猫在阳光下玩耍，水彩画风格','模糊, 低质量, 变形','{\"size\": \"1024*1024\", \"prompt\": \"一只可爱的小猫在阳光下玩耍，水彩画风格\", \"modelKey\": \"wanx-v1\", \"negativePrompt\": \"模糊, 低质量, 变形\"}','{}',3,'2026-01-27 17:21:25','2026-01-27 17:22:18','/creation_tasks/generations/59a5bd2956264337b057e43c88f9ac11.png',NULL,NULL,NULL,0,5,4,'b2fa74c9-52ab-472b-9c86-a2c4c05748af',1.0000,0,'2026-01-27 17:21:25'),('97bb9f708f5d4f1f854b25d521c69540','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:31:15','2026-01-27 18:31:34',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183117-4hvhx',5.0000,0,'2026-01-27 18:31:15'),('a97b989b476b48b6bca7479a30ead59f','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:35:59','2026-01-27 18:36:28',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183601-trhb7',5.0000,0,'2026-01-27 18:35:59'),('b7036822e53f4a4db11d64424293d0d7','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"duration\": 6, \"modelKey\": \"MiniMax-Hailuo-2.3\", \"resolution\": \"1080P\"}','{}',3,'2026-01-27 20:32:53','2026-01-27 20:34:27',NULL,NULL,NULL,NULL,0,5,6,'360300219359316',5.0000,0,'2026-01-27 20:32:53'),('dc97860b0ff74e98a92ea6003b09b993','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"duration\": 6, \"modelKey\": \"MiniMax-Hailuo-2.3\"}','{}',3,'2026-01-27 20:26:35','2026-01-27 20:28:31',NULL,NULL,NULL,NULL,0,5,6,'360300134470023',5.0000,0,'2026-01-27 20:26:35');
+INSERT INTO `ai_generation_tasks` VALUES ('05cc5fe1506146caa54bb7c0277cda72','U2026013035276',1,NULL,'写一段5s视频生成的prompt','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"写一段5s视频生成的prompt\", \"duration\": 5, \"modelKey\": \"qwen-flash\", \"resolution\": \"1080P\", \"negativePrompt\": \"\"}','{\"content\": \"【5秒短视频生成Prompt】  \\n画面：清晨阳光洒在城市街道，一辆红色自行车从镜头前疾驰而过，车轮溅起水花（雨后地面反光）。  \\n音效：轻快的电子音乐渐起，伴随清脆的铃声和车轮滚动声。  \\n字幕：「出发，追光！」（动态弹出，字体简洁现代）  \\n风格：高饱和色彩，电影感镜头，慢动作开场+快速推进结尾。  \\n时长：5秒，节奏紧凑，情绪积极向上。  \\n\\n👉 适用平台：抖音/快手/小红书短视频创意素材。\"}',3,'2026-01-30 17:59:21','2026-01-30 17:59:27',NULL,NULL,NULL,NULL,0,5,2,NULL,150.0000,0,'2026-01-30 17:59:21'),('0a964f168622490dbe6aef5131a73cd0','U2026013035276',1,NULL,'生成一段用于AI视频生成的prompt,视频时长为5s','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"生成一段用于AI视频生成的prompt,视频时长为5s\", \"duration\": 5, \"modelKey\": \"qwen-flash\", \"resolution\": \"1080P\", \"negativePrompt\": \"\"}','{\"content\": \"【AI视频生成Prompt】（5秒时长）\\n\\n画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\\n\\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \\n氛围：宁静、神秘、充满生命力。  \\n节奏：缓慢推进→瞬间定格→快速淡出。  \\n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。\\n\\n提示词关键词：#自然奇观 #晨光幻境 #动态细节 #4K电影感 #5秒短片 #AI生成视频\"}',3,'2026-02-01 22:39:49','2026-02-01 22:39:55',NULL,NULL,NULL,NULL,0,5,2,NULL,246.0000,0,'2026-02-01 22:39:49'),('1598cf40faf0412d9b1eca4a907ce207','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:50:20','2026-01-27 18:51:19','/creation_tasks/generations/1598cf40faf0412d9b1eca4a907ce207.mp4',NULL,NULL,NULL,0,5,7,'cgt-20260127185021-xn4tz',5.0000,0,'2026-01-27 18:50:20'),('21b1104af7b846eb8aab48d658be8720','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:44:10','2026-01-27 18:44:39',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127184411-x2tx9',5.0000,0,'2026-01-27 18:44:10'),('46bafecdb0d84c7baad73e94f7153324','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:39:48','2026-01-27 18:40:10',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183950-wd4z2',5.0000,0,'2026-01-27 18:39:48'),('488cb85d168d4b9999a3df9912722dbc','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"modelKey\": \"MiniMax-Hailuo-2.3\"}','{}',2,'2026-01-27 20:16:18',NULL,NULL,NULL,NULL,NULL,0,5,6,'360297697042820',5.0000,0,'2026-01-27 20:16:18'),('503dbc3522f6401eb6fbd64b8254abae','U2026013035276',1,NULL,'生成一段5s视频的脚本','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"生成一段5s视频的脚本\", \"duration\": 5, \"modelKey\": \"qwen-flash\", \"resolution\": \"1080P\", \"negativePrompt\": \"\"}','{\"content\": \"【画面】清晨阳光洒在城市街头，一位年轻人快步走过，耳机里播放着轻快音乐。  \\n【镜头】特写：他微笑抬头，迎着朝阳迈出一步。  \\n【字幕】“新的一天，从心动开始。”  \\n【音效】轻快的钢琴旋律渐起，鸟鸣声点缀。  \\n【时长】5秒  \\n\\n（注：适用于社交媒体宣传、品牌广告或个人日常vlog开场）\"}',3,'2026-02-02 10:18:53','2026-02-02 10:18:57',NULL,NULL,NULL,NULL,0,5,2,NULL,112.0000,0,'2026-02-02 10:18:53'),('59a5bd2956264337b057e43c88f9ac11','test-user-001',2,NULL,'一只可爱的小猫在阳光下玩耍，水彩画风格','模糊, 低质量, 变形','{\"size\": \"1024*1024\", \"prompt\": \"一只可爱的小猫在阳光下玩耍，水彩画风格\", \"modelKey\": \"wanx-v1\", \"negativePrompt\": \"模糊, 低质量, 变形\"}','{}',3,'2026-01-27 17:21:25','2026-01-27 17:22:18','/creation_tasks/generations/59a5bd2956264337b057e43c88f9ac11.png',NULL,NULL,NULL,0,5,4,'b2fa74c9-52ab-472b-9c86-a2c4c05748af',1.0000,0,'2026-01-27 17:21:25'),('77d617a7e0354aac803a0b7a917dbc77','U2026013035276',3,NULL,'画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\n\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \n氛围：宁静、神秘、充满生命力。  \n节奏：缓慢推进→瞬间定格→快速淡出。  \n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\\n\\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \\n氛围：宁静、神秘、充满生命力。  \\n节奏：缓慢推进→瞬间定格→快速淡出。  \\n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。\", \"duration\": 5, \"modelKey\": \"MiniMax-Hailuo-2.3\", \"resolution\": \"720P\", \"negativePrompt\": \"\"}','{}',4,'2026-02-01 22:40:39','2026-02-01 22:40:43',NULL,NULL,NULL,'Minimax error: invalid params, model MiniMax-Hailuo-2.3 does not support duration 5s, supported durations: 6s, 10s',0,5,6,NULL,5.0000,0,'2026-02-01 22:40:39'),('8ad1a29fab8541b387f425c05b0d9801','U2026013035276',3,NULL,'5秒短视频生成Prompt】  \\n画面：清晨阳光洒在城市街道，一辆红色自行车从镜头前疾驰而过，车轮溅起水花（雨后地面反光）。  \\n音效：轻快的电子音乐渐起，伴随清脆的铃声和车轮滚动声。  \\n字幕：「出发，追光！」（动态弹出，字体简洁现代）  \\n风格：高饱和色彩，电影感镜头，慢动作开场+快速推进结尾。','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"5秒短视频生成Prompt】  \\\\n画面：清晨阳光洒在城市街道，一辆红色自行车从镜头前疾驰而过，车轮溅起水花（雨后地面反光）。  \\\\n音效：轻快的电子音乐渐起，伴随清脆的铃声和车轮滚动声。  \\\\n字幕：「出发，追光！」（动态弹出，字体简洁现代）  \\\\n风格：高饱和色彩，电影感镜头，慢动作开场+快速推进结尾。\", \"duration\": 5, \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720P\", \"negativePrompt\": \"\"}','{}',3,'2026-01-30 18:00:20','2026-01-30 18:01:24','/storage/videos/8ad1a29fab8541b387f425c05b0d9801.mp4',NULL,NULL,NULL,0,5,7,'cgt-20260130180022-gfsz6',5.0000,0,'2026-01-30 18:00:20'),('8b21085e2a7d470c98282b433918ec0b','U2026013035276',3,NULL,'【画面】清晨阳光洒在城市街头，一位年轻人快步走过，耳机里播放着轻快音乐。  \n【镜头】特写：他微笑抬头，迎着朝阳迈出一步。  \n【字幕】“新的一天，从心动开始。”  \n【音效】轻快的钢琴旋律渐起，鸟鸣声点缀。  \n【时长】5秒  ','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"【画面】清晨阳光洒在城市街头，一位年轻人快步走过，耳机里播放着轻快音乐。  \\n【镜头】特写：他微笑抬头，迎着朝阳迈出一步。  \\n【字幕】“新的一天，从心动开始。”  \\n【音效】轻快的钢琴旋律渐起，鸟鸣声点缀。  \\n【时长】5秒  \", \"duration\": 5, \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720P\", \"negativePrompt\": \"\"}','{}',3,'2026-02-02 10:19:22','2026-02-02 10:20:09','/storage/videos/8b21085e2a7d470c98282b433918ec0b.mp4',NULL,NULL,NULL,0,5,7,'cgt-20260202101936-c7pjg',5.0000,0,'2026-02-02 10:19:22'),('97bb9f708f5d4f1f854b25d521c69540','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:31:15','2026-01-27 18:31:34',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183117-4hvhx',5.0000,0,'2026-01-27 18:31:15'),('990e235536fc4a598ff9f4f418c401e2','U2026013035276',3,NULL,'画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\n\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \n氛围：宁静、神秘、充满生命力。  \n节奏：缓慢推进→瞬间定格→快速淡出。  \n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。(String), (String), {\"prompt\":\"画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\\n\\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \\n氛围：宁静、神秘、充满生命力。  \\n节奏：缓慢推进→瞬间定格→快速淡出。  \\n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。\n','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\\n\\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \\n氛围：宁静、神秘、充满生命力。  \\n节奏：缓慢推进→瞬间定格→快速淡出。  \\n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。(String), (String), {\\\"prompt\\\":\\\"画面：清晨的阳光穿透薄雾，缓缓洒在一片静谧的森林中。镜头从空中俯冲而下，穿过树梢，聚焦在一棵古老的橡树上。树干纹理清晰，枝叶随微风轻轻摇曳，露珠从叶片滑落，滴入地面的水洼，泛起一圈圈涟漪。一只小鹿从林间轻盈跃出，抬头望向镜头，眼神清澈灵动，随即转身消失在晨光中。\\\\n\\\\n风格：超现实自然美学，电影级光影，4K高清，柔焦镜头，细腻动态细节。  \\\\n氛围：宁静、神秘、充满生命力。  \\\\n节奏：缓慢推进→瞬间定格→快速淡出。  \\\\n音效建议：轻柔的风声、树叶沙沙声、远处鸟鸣渐弱，结尾一声清脆的鹿蹄回响。\\n\", \"duration\": 6, \"modelKey\": \"MiniMax-Hailuo-2.3\", \"resolution\": \"720P\", \"negativePrompt\": \"\"}','{}',3,'2026-02-01 22:44:02','2026-02-01 22:45:30','/storage/videos/990e235536fc4a598ff9f4f418c401e2.mp4',NULL,NULL,NULL,0,5,6,'362100851929176',5.0000,0,'2026-02-01 22:44:02'),('a97b989b476b48b6bca7479a30ead59f','test-user-001',3,NULL,'一辆红色跑车在山间公路上飞驰',NULL,'{\"prompt\": \"一辆红色跑车在山间公路上飞驰\", \"duration\": \"5\", \"modelKey\": \"doubao-seedance-1-0-lite-t2v-250428\", \"resolution\": \"720p\"}','{}',3,'2026-01-27 18:35:59','2026-01-27 18:36:28',NULL,NULL,NULL,NULL,0,5,7,'cgt-20260127183601-trhb7',5.0000,0,'2026-01-27 18:35:59'),('af6f7e91b1af43b095ab2d0c78d5f198','U2026013035276',1,NULL,'写一段5s的视频生成的prompt','','{\"image\": null, \"ratio\": \"16:9\", \"prompt\": \"写一段5s的视频生成的prompt\", \"duration\": 5, \"modelKey\": \"qwen-flash\", \"resolution\": \"1080P\", \"negativePrompt\": \"\"}','{}',1,'2026-01-30 17:31:06',NULL,NULL,NULL,NULL,NULL,0,5,2,NULL,0.0000,0,'2026-01-30 17:31:06'),('b7036822e53f4a4db11d64424293d0d7','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"duration\": 6, \"modelKey\": \"MiniMax-Hailuo-2.3\", \"resolution\": \"1080P\"}','{}',3,'2026-01-27 20:32:53','2026-01-27 20:34:27',NULL,NULL,NULL,NULL,0,5,6,'360300219359316',5.0000,0,'2026-01-27 20:32:53'),('dc97860b0ff74e98a92ea6003b09b993','test-user-001',3,NULL,'一个宇航员漂浮在太空中，背景是地球',NULL,'{\"prompt\": \"一个宇航员漂浮在太空中，背景是地球\", \"duration\": 6, \"modelKey\": \"MiniMax-Hailuo-2.3\"}','{}',3,'2026-01-27 20:26:35','2026-01-27 20:28:31',NULL,NULL,NULL,NULL,0,5,6,'360300134470023',5.0000,0,'2026-01-27 20:26:35');
 /*!40000 ALTER TABLE `ai_generation_tasks` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -68,11 +68,11 @@ DROP TABLE IF EXISTS `ai_models`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ai_models` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `model_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型名称',
-  `model_key` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型标识',
-  `provider` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '提供商',
-  `model_type` varchar(20) COLLATE utf8mb4_general_ci NOT NULL COMMENT '类型: TEXT, IMAGE等',
-  `api_endpoint` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '接口地址',
+  `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型名称',
+  `model_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型标识',
+  `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '提供商',
+  `model_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '类型: TEXT, IMAGE等',
+  `api_endpoint` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '接口地址',
   `api_config` json DEFAULT NULL COMMENT 'API配置',
   `billing_mode` tinyint NOT NULL DEFAULT '1' COMMENT '计费: 1-按次, 2-Token',
   `unit_price` decimal(10,4) DEFAULT NULL COMMENT '单价',
@@ -105,19 +105,19 @@ DROP TABLE IF EXISTS `audio_materials`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `audio_materials` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务音频ID)',
-  `audio_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '音频名称',
-  `type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '类型',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务音频ID)',
+  `audio_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '音频名称',
+  `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '类型',
   `duration_seconds` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '时长(秒)',
   `file_size` bigint DEFAULT '0' COMMENT '文件大小',
-  `file_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件路径',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件路径',
   `bitrate` int DEFAULT NULL COMMENT '比特率',
-  `sample_rate` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '采样率',
-  `uploader_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
+  `sample_rate` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '采样率',
+  `uploader_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常, 2-封禁, 3-禁用',
   `copyright_status` tinyint NOT NULL DEFAULT '1' COMMENT '版权: 1-免费商用, 2-付费授权, 3-个人使用',
-  `tags` text COLLATE utf8mb4_general_ci COMMENT '标签',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -146,12 +146,12 @@ DROP TABLE IF EXISTS `content_reviews`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `content_reviews` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `content_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容ID(UGC表ID)',
-  `reviewer_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '审核员ID(User表ID)',
+  `content_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容ID(UGC表ID)',
+  `reviewer_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '审核员ID(User表ID)',
   `review_status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-待审核, 2-通过, 3-驳回, 4-复审',
   `review_time` datetime DEFAULT NULL COMMENT '审核时间',
-  `reject_reason` text COLLATE utf8mb4_general_ci COMMENT '驳回原因',
-  `suggestions` text COLLATE utf8mb4_general_ci COMMENT '建议',
+  `reject_reason` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '驳回原因',
+  `suggestions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '建议',
   `next_review_time` datetime DEFAULT NULL COMMENT '下次审核时间',
   `version` int NOT NULL DEFAULT '1' COMMENT '版本号',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -182,13 +182,13 @@ DROP TABLE IF EXISTS `creators`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `creators` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务创作者ID)',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `platform_account` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '平台账号',
-  `platform_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '平台类型',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务创作者ID)',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `platform_account` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '平台账号',
+  `platform_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '平台类型',
   `follower_count` int NOT NULL DEFAULT '0' COMMENT '粉丝数',
   `verification_status` tinyint NOT NULL DEFAULT '1' COMMENT '认证状态: 1-未认证, 2-已认证, 3-认证中',
-  `bio` text COLLATE utf8mb4_general_ci COMMENT '简介',
+  `bio` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '简介',
   `contact_info` json DEFAULT NULL COMMENT '联系信息',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -253,7 +253,7 @@ DROP TABLE IF EXISTS `financial_statistics`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `financial_statistics` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `stat_period` varchar(20) COLLATE utf8mb4_general_ci NOT NULL COMMENT '周期: daily, weekly',
+  `stat_period` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '周期: daily, weekly',
   `stat_date` date DEFAULT NULL COMMENT '统计日期',
   `total_revenue` decimal(15,2) NOT NULL DEFAULT '0.00' COMMENT '总营收',
   `total_expense` decimal(15,2) NOT NULL DEFAULT '0.00' COMMENT '总支出',
@@ -287,18 +287,18 @@ DROP TABLE IF EXISTS `image_materials`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `image_materials` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务素材ID)',
-  `image_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '图片名称',
-  `category` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分类',
-  `file_path` varchar(500) COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件路径',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务素材ID)',
+  `image_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '图片名称',
+  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分类',
+  `file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件路径',
   `file_size` bigint DEFAULT '0' COMMENT '文件大小(字节)',
-  `resolution` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分辨率',
-  `format` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
-  `uploader_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
+  `resolution` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分辨率',
+  `format` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
+  `uploader_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常, 2-封禁, 3-禁用',
   `copyright_status` tinyint NOT NULL DEFAULT '1' COMMENT '版权: 1-免费商用, 2-付费授权, 3-个人使用',
-  `tags` text COLLATE utf8mb4_general_ci COMMENT '标签',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `source_type` tinyint NOT NULL DEFAULT '2' COMMENT '来源: 1-官方, 2-用户上传, 3-AI生成',
   `is_public` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否公开',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -318,6 +318,7 @@ CREATE TABLE `image_materials` (
 
 LOCK TABLES `image_materials` WRITE;
 /*!40000 ALTER TABLE `image_materials` DISABLE KEYS */;
+INSERT INTO `image_materials` VALUES ('c8a74fda76c64e53b5b023e5d7c68252','81761997238_.pic.jpg',NULL,'/profile/upload/materials/image/20260202/3988960d-a2cd-46c4-9632-d639432f7a89.jpg',24245,NULL,NULL,'U2026013035276',1,1,NULL,NULL,2,0,'2026-02-02 10:22:12','2026-02-02 10:22:12',0);
 /*!40000 ALTER TABLE `image_materials` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -330,19 +331,19 @@ DROP TABLE IF EXISTS `operation_logs`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `operation_logs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `operation_type` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '操作类型',
-  `operation_target` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '操作对象',
-  `target_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '对象ID',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `operation_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '操作类型',
+  `operation_target` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '操作对象',
+  `target_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '对象ID',
   `operation_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
-  `ip_address` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'IP地址',
-  `user_agent` text COLLATE utf8mb4_general_ci COMMENT 'UA信息',
-  `request_method` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '请求方法',
-  `request_path` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '请求路径',
-  `request_params` text COLLATE utf8mb4_general_ci COMMENT '请求参数',
+  `ip_address` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'IP地址',
+  `user_agent` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'UA信息',
+  `request_method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '请求方法',
+  `request_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '请求路径',
+  `request_params` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '请求参数',
   `response_code` int DEFAULT NULL COMMENT '响应码',
   `response_time_ms` int DEFAULT NULL COMMENT '响应耗时',
-  `error_message` text COLLATE utf8mb4_general_ci COMMENT '错误信息',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '错误信息',
   `additional_info` json DEFAULT NULL COMMENT '额外信息',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -372,10 +373,10 @@ DROP TABLE IF EXISTS `permissions`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permissions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `permission_code` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限编码，唯一',
-  `permission_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限名称',
-  `category` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '权限分类',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '权限描述',
+  `permission_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限编码，唯一',
+  `permission_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限名称',
+  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '权限分类',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '权限描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -403,14 +404,14 @@ DROP TABLE IF EXISTS `review_rules`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `review_rules` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `rule_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '规则名称',
-  `rule_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '规则类型',
+  `rule_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '规则名称',
+  `rule_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '规则类型',
   `conditions` json NOT NULL COMMENT '审核条件',
   `actions` json NOT NULL COMMENT '审核动作',
   `priority` int NOT NULL DEFAULT '5' COMMENT '优先级',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-启用, 2-禁用',
-  `creator_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建者ID',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `creator_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建者ID',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -470,8 +471,8 @@ DROP TABLE IF EXISTS `roles`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `roles` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `role_name` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色名称，唯一',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '角色描述',
+  `role_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色名称，唯一',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '角色描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -499,8 +500,8 @@ DROP TABLE IF EXISTS `storage_configs`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `storage_configs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `storage_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '存储类型',
-  `base_path` varchar(500) COLLATE utf8mb4_general_ci NOT NULL COMMENT '基础路径',
+  `storage_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '存储类型',
+  `base_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '基础路径',
   `max_capacity` bigint DEFAULT NULL COMMENT '最大容量',
   `current_usage` bigint NOT NULL DEFAULT '0' COMMENT '当前使用量',
   `file_types` json DEFAULT NULL COMMENT '允许文件类型',
@@ -534,14 +535,14 @@ DROP TABLE IF EXISTS `system_configs`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `system_configs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `config_key` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置键，唯一',
-  `config_value` text COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置值',
-  `config_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '配置类型',
-  `category` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分类',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `config_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置键，唯一',
+  `config_value` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置值',
+  `config_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '配置类型',
+  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分类',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `is_public` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否公开',
-  `created_by` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建人ID',
-  `updated_by` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '更新人ID',
+  `created_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建人ID',
+  `updated_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '更新人ID',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -569,10 +570,10 @@ DROP TABLE IF EXISTS `task_resources`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `task_resources` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `task_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '任务ID',
+  `task_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '任务ID',
   `resource_type` tinyint NOT NULL COMMENT '资源类型: 1-图片, 2-视频, 3-音频',
-  `resource_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '资源业务ID',
-  `usage_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '使用类型',
+  `resource_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资源业务ID',
+  `usage_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '使用类型',
   `sequence` int DEFAULT NULL COMMENT '顺序',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -608,8 +609,8 @@ CREATE TABLE `task_scheduling_configs` (
   `memory_threshold_percent` int NOT NULL DEFAULT '80' COMMENT '内存阈值',
   `retry_policy` json DEFAULT NULL COMMENT '重试策略',
   `timeout_policy` json DEFAULT NULL COMMENT '超时策略',
-  `schedule_algorithm` varchar(50) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'FIFO' COMMENT '调度算法',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `schedule_algorithm` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'FIFO' COMMENT '调度算法',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -669,17 +670,17 @@ DROP TABLE IF EXISTS `transcoding_configs`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `transcoding_configs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `config_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置名称',
-  `video_codec` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '视频编码',
-  `audio_codec` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '音频编码',
+  `config_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '配置名称',
+  `video_codec` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '视频编码',
+  `audio_codec` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '音频编码',
   `video_bitrate_kbps` int NOT NULL COMMENT '视频码率',
   `audio_bitrate_kbps` int NOT NULL COMMENT '音频码率',
   `frame_rate` int NOT NULL COMMENT '帧率',
   `resolution_preset` json DEFAULT NULL COMMENT '分辨率预设',
   `quality_preset` tinyint NOT NULL DEFAULT '2' COMMENT '质量: 1-低, 2-中, 3-高, 4-自定义',
   `is_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否默认',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
-  `created_by` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建人ID',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
+  `created_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建人ID',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -706,17 +707,17 @@ DROP TABLE IF EXISTS `tts_configs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tts_configs` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
-  `model_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型名称',
-  `voice_type` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '声音类型',
-  `language_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '语言类型',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
+  `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模型名称',
+  `voice_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '声音类型',
+  `language_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '语言类型',
   `speed_words_per_min` int DEFAULT NULL COMMENT '语速',
-  `sample_rate` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '采样率',
-  `model_file_path` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模型路径',
+  `sample_rate` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '采样率',
+  `model_file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模型路径',
   `config_json` json DEFAULT NULL COMMENT '配置详情',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-启用, 2-禁用',
-  `creator_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建者ID',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `creator_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '创建者ID',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -746,14 +747,14 @@ DROP TABLE IF EXISTS `user_activity_logs`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_activity_logs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `activity_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '活动类型',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `activity_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '活动类型',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `activity_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '活动时间',
-  `ip_address` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'IP地址',
-  `user_agent` text COLLATE utf8mb4_general_ci COMMENT 'UA信息',
+  `ip_address` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'IP地址',
+  `user_agent` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'UA信息',
   `duration_seconds` int DEFAULT NULL COMMENT '时长',
-  `resource_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '资源ID',
+  `resource_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '资源ID',
   `additional_info` json DEFAULT NULL COMMENT '额外信息',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -782,17 +783,17 @@ DROP TABLE IF EXISTS `user_generated_content`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_generated_content` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务内容ID)',
-  `creator_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '创作者ID(creators表ID)',
-  `content_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容名称',
-  `task_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联任务ID',
-  `format` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
-  `resolution` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分辨率',
-  `file_path` varchar(500) COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件路径',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务内容ID)',
+  `creator_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '创作者ID(creators表ID)',
+  `content_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容名称',
+  `task_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联任务ID',
+  `format` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
+  `resolution` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '分辨率',
+  `file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件路径',
   `file_size` bigint DEFAULT '0' COMMENT '文件大小',
-  `thumbnail_path` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '缩略图',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
-  `tags` text COLLATE utf8mb4_general_ci COMMENT '标签',
+  `thumbnail_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '缩略图',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
+  `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -819,14 +820,14 @@ DROP TABLE IF EXISTS `user_profiles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_profiles` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `real_name` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '真实姓名',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `real_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '真实姓名',
   `gender` tinyint DEFAULT '0' COMMENT '性别: 0-未知, 1-男, 2-女',
   `birthday` date DEFAULT NULL COMMENT '出生日期',
-  `country` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '国家',
-  `city` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '城市',
-  `bio` text COLLATE utf8mb4_general_ci COMMENT '个人简介',
+  `country` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '国家',
+  `city` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '城市',
+  `bio` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '个人简介',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -853,8 +854,8 @@ DROP TABLE IF EXISTS `user_wallets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_wallets` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
   `balance` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT '余额',
   `total_recharged` decimal(15,4) DEFAULT '0.0000' COMMENT '累计充值',
   `total_consumed` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT '累计消费',
@@ -872,7 +873,7 @@ CREATE TABLE `user_wallets` (
 
 LOCK TABLES `user_wallets` WRITE;
 /*!40000 ALTER TABLE `user_wallets` DISABLE KEYS */;
-INSERT INTO `user_wallets` VALUES ('wallet-test-001','test-user-001',957.7310,1000.0000,42.2690,'2026-01-27 15:16:21','2026-01-27 20:32:53',0);
+INSERT INTO `user_wallets` VALUES ('W2026013081116','U2026013035276',985.0000,1000.0000,15.0000,'2026-01-30 17:15:41','2026-02-02 10:19:21',0),('wallet-test-001','test-user-001',957.7310,1000.0000,42.2690,'2026-01-27 15:16:21','2026-01-27 20:32:53',0);
 /*!40000 ALTER TABLE `user_wallets` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -884,12 +885,12 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务用户ID)',
-  `username` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户名',
-  `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL COMMENT '邮箱',
-  `password_hash` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '密码哈希',
-  `avatar_url` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '头像URL',
-  `phone` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '手机号',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务用户ID)',
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户名',
+  `email` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '邮箱',
+  `password_hash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密码哈希',
+  `avatar_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '头像URL',
+  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '手机号',
   `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常, 2-封禁, 3-注销',
   `role_id` bigint unsigned NOT NULL COMMENT '角色ID',
@@ -909,7 +910,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('test-user-001','test_user','test@example.com','$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',NULL,NULL,NULL,1,1,'2026-01-27 15:16:21','2026-01-27 15:16:21');
+INSERT INTO `users` VALUES ('test-user-001','test_user','test@example.com','$2a$10$7JB720yubVSZv5W56jdx.euT/8uzRNiJ9.gG.qD.Ibonn7.x./nwu',NULL,NULL,NULL,1,1,'2026-01-27 15:16:21','2026-02-02 09:17:44'),('U2026013035276','tzfirstnoob','3107201641@qq.com','$2a$10$GHubTQgPU76fp7vQF50NUuxDbt93qUrZq1Lvi4k2Gf4gAUJqfTpDe','/storage/avatar/U2026013035276_1769958516424.jpg','18286133350',NULL,1,1,'2026-01-30 17:15:40','2026-02-02 09:22:07');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -921,11 +922,11 @@ DROP TABLE IF EXISTS `video_edit_projects`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `video_edit_projects` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务工程ID)',
-  `user_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `project_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'untitled' COMMENT '工程名称',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务工程ID)',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
+  `project_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'untitled' COMMENT '工程名称',
   `timeline_data` json DEFAULT NULL COMMENT '时间轴数据',
-  `cover_image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '封面图',
+  `cover_image` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '封面图',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-草稿, 2-合成中, 3-完成',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -953,19 +954,20 @@ DROP TABLE IF EXISTS `video_materials`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `video_materials` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务视频ID)',
-  `video_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '视频名称',
-  `type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '视频类型',
-  `resolution` varchar(50) COLLATE utf8mb4_general_ci NOT NULL COMMENT '分辨率',
-  `format` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务视频ID)',
+  `video_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '视频名称',
+  `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '视频类型',
+  `resolution` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '分辨率',
+  `format` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '格式',
   `duration_seconds` decimal(10,2) DEFAULT '0.00' COMMENT '时长(秒)',
-  `file_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件路径',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件路径',
+  `cover_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '封面路径',
   `file_size` bigint DEFAULT '0' COMMENT '文件大小',
-  `uploader_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
+  `uploader_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '上传者ID',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常, 2-封禁, 3-禁用',
   `copyright_status` tinyint NOT NULL DEFAULT '1' COMMENT '版权: 1-免费商用, 2-付费授权, 3-个人使用',
-  `tags` text COLLATE utf8mb4_general_ci COMMENT '标签',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `source_type` tinyint NOT NULL DEFAULT '2' COMMENT '来源: 1-官方, 2-用户上传, 3-AI生成',
   `is_public` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否公开',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -995,17 +997,17 @@ DROP TABLE IF EXISTS `video_templates`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `video_templates` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务模板ID)',
-  `template_name` varchar(200) COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板名称',
-  `type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '类型',
-  `aspect_ratio` varchar(20) COLLATE utf8mb4_general_ci NOT NULL COMMENT '宽高比',
-  `preview_image_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '预览图路径',
-  `template_file_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模板文件路径',
-  `creator_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '创建者ID',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务模板ID)',
+  `template_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板名称',
+  `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '类型',
+  `aspect_ratio` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '宽高比',
+  `preview_image_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '预览图路径',
+  `template_file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模板文件路径',
+  `creator_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '创建者ID',
   `usage_count` int DEFAULT '0' COMMENT '使用次数',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-启用, 2-禁用, 3-草稿',
-  `tags` text COLLATE utf8mb4_general_ci COMMENT '标签',
-  `description` text COLLATE utf8mb4_general_ci COMMENT '描述',
+  `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
   `config_json` json DEFAULT NULL COMMENT '模板配置',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -1035,12 +1037,12 @@ DROP TABLE IF EXISTS `wallet_transactions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `wallet_transactions` (
-  `id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务流水ID)',
-  `wallet_id` varchar(32) COLLATE utf8mb4_general_ci NOT NULL COMMENT '钱包ID',
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID(业务流水ID)',
+  `wallet_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '钱包ID',
   `type` tinyint NOT NULL COMMENT '类型: 1-充值, 2-消费, 3-退款',
   `amount` decimal(15,4) NOT NULL COMMENT '金额',
-  `related_task_id` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联任务ID',
-  `description` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '描述',
+  `related_task_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '关联任务ID',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '描述',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
@@ -1056,6 +1058,7 @@ CREATE TABLE `wallet_transactions` (
 
 LOCK TABLES `wallet_transactions` WRITE;
 /*!40000 ALTER TABLE `wallet_transactions` DISABLE KEYS */;
+INSERT INTO `wallet_transactions` VALUES ('015a8308a510404c9441f86e3dcd1183','W2026013081116',2,-5.0000,'8ad1a29fab8541b387f425c05b0d9801','AI生成任务预扣费','2026-01-30 18:00:19','2026-01-30 18:00:19',0),('01cd1afdb5e348a7ae00241f7e62fffa','W2026013081116',2,0.0000,'05cc5fe1506146caa54bb7c0277cda72','AI生成任务预扣费','2026-01-30 17:59:20','2026-01-30 17:59:20',0),('243ea7b1756947a487c5502a8b135c71','W2026013081116',2,-5.0000,'8b21085e2a7d470c98282b433918ec0b','AI生成任务预扣费','2026-02-02 10:19:22','2026-02-02 10:19:22',0),('75c6a1633da64600a6a0c65739ec73cb','W2026013081116',2,0.0000,'503dbc3522f6401eb6fbd64b8254abae','AI生成任务预扣费','2026-02-02 10:18:53','2026-02-02 10:18:53',0),('78b2dc331fd447bf8fb34dc02828a3b9','W2026013081116',2,-5.0000,'77d617a7e0354aac803a0b7a917dbc77','AI生成任务预扣费','2026-02-01 22:40:37','2026-02-01 22:40:37',0),('996eb444ba9c45f6a6983e14aeee3a48','W2026013081116',2,-5.0000,'990e235536fc4a598ff9f4f418c401e2','AI生成任务预扣费','2026-02-01 22:44:01','2026-02-01 22:44:01',0),('d0e2f66c27cc49f38766e424452b524d','W2026013081116',2,0.0000,'0a964f168622490dbe6aef5131a73cd0','AI生成任务预扣费','2026-02-01 22:39:49','2026-02-01 22:39:49',0),('d7ffaec8199f4ba7ac94b0b497d9c099','W2026013081116',2,0.0000,'af6f7e91b1af43b095ab2d0c78d5f198','AI生成任务预扣费','2026-01-30 17:31:04','2026-01-30 17:31:04',0),('f5f855ae94584c9689a8c557011996ed','W2026013081116',3,5.0000,'77d617a7e0354aac803a0b7a917dbc77','任务执行失败退款','2026-02-01 22:40:46','2026-02-01 22:40:46',0);
 /*!40000 ALTER TABLE `wallet_transactions` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -1068,4 +1071,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-28  9:44:05
+-- Dump completed on 2026-02-04 11:29:39

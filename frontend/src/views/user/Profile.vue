@@ -365,16 +365,7 @@ const getCreatorApplyTip = computed(() => {
 
 // 头像URL处理
 const getAvatarUrl = computed(() => {
-  const url = profile.value?.avatarUrl
-  if (!url) return defaultAvatar
-  
-  // 核心修复：针对 /storage/ 路径的资源，强制转换为相对路径
-  // 这样可以通过 Vite 的 proxy 转发请求，解决 CORS 问题
-  if (url.includes('/storage/')) {
-    return url.substring(url.indexOf('/storage/'))
-  }
-  
-  return url
+  return profile.value?.avatarUrl || defaultAvatar
 })
 
 // 监听编辑状态变化

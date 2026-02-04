@@ -25,6 +25,7 @@ import java.util.Map;
 public class GenerationController {
 
     private final CreationService creationService;
+    private final com.huike.video.common.service.ResourceService resourceService;
 
     /**
      * 提交生成任务
@@ -79,8 +80,9 @@ public class GenerationController {
         if (task.getStatus() == 3) {
             Map<String, Object> result = new HashMap<>();
             // 根据任务类型，resultFilePath 可能是图片或视频
-            result.put("fileUrl", task.getResultFilePath());
-            result.put("coverUrl", task.getResultCoverPath());
+            // Use ResourceService to get Full URL
+            result.put("fileUrl", resourceService.getUrl(task.getResultFilePath()));
+            result.put("coverUrl", resourceService.getUrl(task.getResultCoverPath()));
             result.put("size", task.getResultFileSize());
             
             // 返回文本生成结果

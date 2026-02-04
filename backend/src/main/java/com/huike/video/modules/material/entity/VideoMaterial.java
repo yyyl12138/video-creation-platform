@@ -38,6 +38,9 @@ public class VideoMaterial extends BaseEntity {
     /** 文件路径 */
     private String filePath;
 
+    /** 封面路径 */
+    private String coverPath;
+
     /** 文件大小(字节) */
     private Long fileSize;
 

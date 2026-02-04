@@ -35,6 +35,7 @@ public class UserServiceImpl implements UserService {
     private final UserProfileMapper userProfileMapper;
     private final CreatorMapper creatorMapper;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final com.huike.video.common.service.ResourceService resourceService;
 
     @Override
     public UserMeResponse getMe() {
@@ -58,7 +59,7 @@ public class UserServiceImpl implements UserService {
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
         response.setPhone(user.getPhone());
-        response.setAvatarUrl(user.getAvatarUrl());
+        response.setAvatarUrl(resourceService.getUrl(user.getAvatarUrl()));
 
         UserMeResponse.Profile profileVo = new UserMeResponse.Profile();
         if (profile != null) {
@@ -178,7 +179,7 @@ public class UserServiceImpl implements UserService {
         // 使用工具类上传文件
         String avatarUrl;
         try {
-            avatarUrl = FileStorageUtils.uploadFile(file, "avatar", userId);
+            avatarUrl = resourceService.store(file, "avatar");
         } catch (IOException e) {
             throw new BusinessException(50001, "头像保存失败: " + e.getMessage());
         }
@@ -192,7 +193,7 @@ public class UserServiceImpl implements UserService {
         }
 
         UploadAvatarResponse resp = new UploadAvatarResponse();
-        resp.setAvatarUrl(avatarUrl);
+        resp.setAvatarUrl(resourceService.getUrl(avatarUrl));
         resp.setFileSize(file.getSize());
         return resp;
     }

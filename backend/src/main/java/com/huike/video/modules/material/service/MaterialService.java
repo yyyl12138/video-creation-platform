@@ -56,4 +56,43 @@ public interface MaterialService {
                                                         Boolean isPublic,
                                                         String category);
 
+    /**
+     * 将 AI 生成结果同步为素材
+     * @param task AI任务实体
+     */
+    void createFromAiResult(com.huike.video.modules.creation.domain.entity.AiTask task);
+
+    // ========== 管理员接口 (1.1-1.3) ==========
+
+    /**
+     * 管理员上传系统素材
+     * @param file 文件
+     * @param copyrightStatus 版权状态: FREE_COMMERCIAL/PAID/PERSONAL_USE
+     * @param category 分类
+     * @param tags 标签，逗号分隔
+     */
+    com.huike.video.modules.material.vo.AdminMaterialUploadResponse uploadSystemMaterial(
+            org.springframework.web.multipart.MultipartFile file,
+            String copyrightStatus,
+            String category,
+            String tags);
+
+    /**
+     * 更新素材状态
+     * @param materialId 素材ID
+     * @param type 素材类型
+     * @param status 目标状态: NORMAL/BANNED/REVIEWING
+     * @param reason 操作原因
+     */
+    boolean updateMaterialStatus(String materialId, String type, String status, String reason);
+
+    /**
+     * 更新素材版权
+     * @param materialId 素材ID
+     * @param type 素材类型
+     * @param copyrightStatus 版权状态
+     */
+    boolean updateMaterialCopyright(String materialId, String type, String copyrightStatus);
+
+
 }
