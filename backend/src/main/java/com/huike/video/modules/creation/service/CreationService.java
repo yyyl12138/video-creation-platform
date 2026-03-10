@@ -46,4 +46,15 @@ public interface CreationService {
      * @return 是否成功
      */
     boolean cancelTask(String taskId, String userId);
+
+    /**
+     * 查询历史生成任务列表
+     * @param userId 用户 ID
+     * @param page 页码
+     * @param size 每页条数
+     * @param status 状态
+     * @param taskType 任务类型
+     * @return 分页任务结果
+     */
+    com.baomidou.mybatisplus.extension.plugins.pagination.Page<AiTask> getHistoryTasks(String userId, int page, int size, String status, String taskType);
 }

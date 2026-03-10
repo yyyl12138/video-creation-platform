@@ -111,4 +111,44 @@ public class GenerationController {
             default: return "UNKNOWN";
         }
     }
+
+    @Operation(summary = "获取历史任务列表", description = "查询用户的生成历史")
+    @GetMapping("/tasks")
+    public Result<com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>>> getHistoryTasks(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String taskType) {
+        String userId = StpUtil.getLoginIdAsString();
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<AiTask> tasks = creationService.getHistoryTasks(userId, page, size, status, taskType);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>> resultPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(tasks.getCurrent(), tasks.getSize(), tasks.getTotal());
+        java.util.List<Map<String, Object>> records = tasks.getRecords().stream().map(task -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("taskId", task.getId());
+            map.put("status", mapStatus(task.getStatus()));
+            map.put("taskType", task.getTaskType());
+            map.put("prompt", task.getPrompt());
+            map.put("createdAt", task.getCreatedAt());
+
+            if (task.getStatus() == 3) {
+                Map<String, Object> result = new HashMap<>();
+                if (task.getResultFilePath() != null) {
+                    result.put("fileUrl", resourceService.getUrl(task.getResultFilePath()));
+                }
+                if (task.getResultCoverPath() != null) {
+                    result.put("coverUrl", resourceService.getUrl(task.getResultCoverPath()));
+                }
+                map.put("result", result);
+            }
+            if (task.getStatus() == 4) {
+                map.put("error", task.getErrorMessage());
+            }
+
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        resultPage.setRecords(records);
+        return Result.success(resultPage);
+    }
 }
