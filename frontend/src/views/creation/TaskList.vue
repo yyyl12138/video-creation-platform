@@ -496,11 +496,15 @@ const formatFileSize = (bytes) => {
 
 const getFullUrl = (url) => {
   if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
-  }
-  const baseUrl = import.meta.env.VITE_APP_BASE_API || ''
-  return baseUrl + url
+  if (/^https?:\/\//i.test(url)) return url
+
+  const apiBase = import.meta.env.VITE_APP_BASE_API || ''
+  // 走 vite proxy 或同域部署时：静态资源直接用相对路径即可（如 /storage/** /profile/**）
+  if (!apiBase || apiBase.startsWith('/')) return url
+
+  // 直连后端时：去掉 /api/v1 前缀，拼出资源完整地址
+  const base = apiBase.replace(/\/api\/v1\/?$/, '')
+  return `${base}${url}`
 }
 
 const downloadFile = (fileUrl, taskId) => {

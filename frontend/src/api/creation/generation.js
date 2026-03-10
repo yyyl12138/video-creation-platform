@@ -53,7 +53,7 @@ export function getTaskList(params) {
  */
 export function cancelGenerationTask(taskId) {
   return request({
-    url: '/generation/tasks/${taskId}/cancel',
+    url: `/generation/tasks/${taskId}/cancel`,
     method: 'post'
   })
 }

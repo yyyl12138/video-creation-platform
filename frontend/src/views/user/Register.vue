@@ -91,12 +91,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { sendAuthCode, registerUser } from '@/api/user/auth'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const countdown = ref(0)
 let countdownTimer = null
@@ -274,6 +275,17 @@ const handleRegister = async () => {
     loading.value = false
   }
 }
+
+// 管理员模式不允许自助注册（避免普通用户伪装管理员进入后台）
+onMounted(() => {
+  const mode = route.query?.mode
+  const redirect = route.query?.redirect
+  const isAdminMode = mode === 'admin' || (typeof redirect === 'string' && redirect.startsWith('/admin'))
+  if (isAdminMode) {
+    ElMessage.warning('管理员账号不支持自助注册，请使用管理员账号登录')
+    router.replace({ path: '/login', query: { mode: 'admin', redirect: redirect || '/admin/users' } })
+  }
+})
 
 // 页面跳转
 const goToLogin = () => {

@@ -221,7 +221,8 @@ const mockTemplates = [
   }
 ]
 
-const uploadUrl = computed(() => `${import.meta.env.VITE_APP_BASE_API}/template/upload`)
+const API_BASE = (import.meta.env.VITE_APP_BASE_API || '/api/v1').replace(/\/$/, '')
+const uploadUrl = computed(() => `${API_BASE}/template/upload`)
 const uploadHeaders = computed(() => ({ Authorization: localStorage.getItem('token') }))
 
 const getCategoryLabel = (category) => {

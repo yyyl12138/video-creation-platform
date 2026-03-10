@@ -78,9 +78,15 @@
         <el-link type="primary" :underline="false" @click="goToForgotPassword">
           忘记密码?
         </el-link>
-        <el-link type="primary" :underline="false" @click="goToRegister">
+        <el-link
+          v-if="!isAdminMode"
+          type="primary"
+          :underline="false"
+          @click="goToRegister"
+        >
           没有账号?立即注册
         </el-link>
+        <span v-else class="admin-hint">请使用管理员账号登录</span>
       </div>
 
       <div class="agreement-footer">
@@ -99,13 +105,15 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Phone } from '@element-plus/icons-vue'
 import VerificationCode from '@/components/VerificationCode.vue'
 import { loginByPassword, loginBySms, sendAuthCode } from '@/api/user/auth'
+import { clearAuthStorage, getUserInfo, isAdminUser } from '@/utils/auth'
 
 const router = useRouter()
+const route = useRoute()
 const activeTab = ref('password')
 const rememberMe = ref(false)
 
@@ -152,6 +160,37 @@ const handleSendCode = async () => {
   }
 }
 
+const isAdminMode = computed(() => {
+  const mode = route.query?.mode
+  const redirect = route.query?.redirect
+  return mode === 'admin' || (typeof redirect === 'string' && redirect.startsWith('/admin'))
+})
+
+// 登录后统一根据角色跳转（仅前端判断）
+const redirectAfterLogin = (res) => {
+  // login API 已落库 userInfo 到 localStorage，这里兜底读取
+  const userInfo = res?.data?.userInfo || getUserInfo() || {}
+  const isAdmin = isAdminUser(userInfo)
+  const redirect = typeof route.query?.redirect === 'string' ? route.query.redirect : ''
+
+  if (isAdminMode.value) {
+    if (!isAdmin) {
+      ElMessage.error('非管理员账号，无法进入管理后台')
+      clearAuthStorage()
+      return
+    }
+    router.push(redirect && redirect.startsWith('/admin') ? redirect : '/admin/users')
+    return
+  }
+
+  // 普通模式：管理员进后台，普通用户进用户端
+  if (isAdmin) {
+    router.push('/admin/users')
+  } else {
+    router.push('/dashboard')
+  }
+}
+
 // 验证码登录
 const handleSmsLogin = async () => {
   if (!isSmsFormValid.value) {
@@ -164,7 +203,7 @@ const handleSmsLogin = async () => {
     const res = await loginBySms(smsForm.phone, smsForm.code)
     ElMessage.success('登录成功')
     // token已在API函数中设置，无需重复设置
-    router.push('/dashboard')
+    redirectAfterLogin(res)
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
@@ -208,7 +247,7 @@ const handlePasswordLogin = async () => {
     }
 
     // token已在API函数中设置，无需重复设置
-    router.push('/dashboard')
+    redirectAfterLogin(res)
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
@@ -216,6 +255,10 @@ const handlePasswordLogin = async () => {
 
 // 页面跳转
 const goToRegister = () => {
+  if (isAdminMode.value) {
+    ElMessage.warning('管理员账号不支持自助注册，请联系系统管理员创建')
+    return
+  }
   router.push('/register')
 }
 
@@ -265,6 +308,11 @@ const goToPrivacyPolicy = () => {
   justify-content: space-between;
   margin-top: 16px;
   font-size: 14px;
+}
+
+.admin-hint {
+  font-size: 13px;
+  color: #909399;
 }
 
 .agreement-footer {

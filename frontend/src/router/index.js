@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { clearAuthStorage, getRoles, getToken, isAdminRoles, buildLoginRedirectQuery } from '@/utils/auth'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -85,16 +87,49 @@ const router = createRouter({
                 { path: 'feed', component: () => import('../views/community/Feed.vue') }
             ]
         },
-        // Admin Module
+        // Admin Module（独立管理员端布局）
         {
             path: '/admin',
-            component: () => import('../layout/Layout.vue'),
+            component: () => import('../layout/AdminLayout.vue'),
+            redirect: '/admin/users',
             children: [
+                { path: 'users', component: () => import('../views/admin/UserManagement.vue') },
+                { path: 'materials', component: () => import('../views/admin/MaterialManagement.vue') },
                 { path: 'review', component: () => import('../views/admin/ContentReview.vue') },
+                { path: 'rules', component: () => import('../views/admin/ReviewRules.vue') },
+                { path: 'models', component: () => import('../views/admin/ModelTtsManagement.vue') },
+                { path: 'stats', component: () => import('../views/admin/AdminStats.vue') },
+                { path: 'finance', component: () => import('../views/admin/FinanceReport.vue') },
                 { path: 'config', component: () => import('../views/admin/SystemConfig.vue') }
             ]
         }
     ]
+})
+
+// 管理员路由守卫：只有管理员角色才能访问 /admin
+router.beforeEach((to) => {
+  const isAdminRoute = to.path.startsWith('/admin')
+  if (!isAdminRoute) return true
+
+  const token = getToken()
+  if (!token) {
+    return {
+      path: '/login',
+      query: buildLoginRedirectQuery(to.fullPath, 'admin')
+    }
+  }
+
+  const roles = getRoles()
+  if (!isAdminRoles(roles)) {
+    ElMessage.error('非管理员账号，无法进入管理后台')
+    clearAuthStorage()
+    return {
+      path: '/login',
+      query: buildLoginRedirectQuery(to.fullPath, 'admin')
+    }
+  }
+
+  return true
 })
 
 export default router

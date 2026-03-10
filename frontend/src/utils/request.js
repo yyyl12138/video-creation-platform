@@ -1,7 +1,16 @@
 import axios from 'axios'
+import { clearAuthStorage } from '@/utils/auth'
+
+const BASE_API = import.meta.env.VITE_APP_BASE_API || '/api/v1'
 
 const service = axios.create({
-    baseURL: import.meta.env.VITE_APP_BASE_API,
+    baseURL: BASE_API,
+    timeout: 50000
+})
+
+// 专用于刷新 Token 的 client：避免与 service 拦截器互相递归
+const refreshClient = axios.create({
+    baseURL: BASE_API,
     timeout: 50000
 })
 
@@ -27,7 +36,7 @@ async function refreshToken() {
             throw new Error('No refresh token')
         }
         
-        const response = await axios.post(`${import.meta.env.VITE_APP_BASE_API}/auth/refresh`, {
+        const response = await refreshClient.post(`/auth/refresh`, {
             refreshToken
         })
         
@@ -39,18 +48,17 @@ async function refreshToken() {
         return newToken
     } catch (error) {
         // 刷新失败，清除所有token并跳转登录
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('tokenExpiry')
-        localStorage.removeItem('rememberedLogin')
-        window.location.href = '/login'
+        clearAuthStorage()
+        const isAdminPath = window.location.pathname.startsWith('/admin')
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.href = isAdminPath ? `/login?mode=admin&redirect=${redirect}` : `/login?redirect=${redirect}`
         throw error
     }
 }
 
 // Request Interceptor
 service.interceptors.request.use(
-    config => {
+    async config => {
         const token = localStorage.getItem('token')
         if (token) {
             // 检查token是否即将过期（剩余30分钟内）
@@ -58,15 +66,24 @@ service.interceptors.request.use(
             const currentTime = Date.now()
             const shouldRefresh = expiryTime - currentTime < 30 * 60 * 1000
             
-            if (shouldRefresh && !isRefreshing) {
-                isRefreshing = true
-                refreshToken().then(newToken => {
-                    isRefreshing = false
+            if (shouldRefresh) {
+                if (!isRefreshing) {
+                    isRefreshing = true
+                    try {
+                        const newToken = await refreshToken()
+                        isRefreshing = false
+                        onRefreshed(newToken)
+                        config.headers['Authorization'] = newToken
+                    } catch (e) {
+                        isRefreshing = false
+                        throw e
+                    }
+                } else {
+                    const newToken = await new Promise(resolve => {
+                        addRefreshSubscriber(resolve)
+                    })
                     config.headers['Authorization'] = newToken
-                    onRefreshed(newToken)
-                }).catch(() => {
-                    isRefreshing = false
-                })
+                }
             } else {
                 config.headers['Authorization'] = token
             }
@@ -99,11 +116,10 @@ service.interceptors.response.use(
                     }).catch(error => {
                         isRefreshing = false
                         // 刷新失败，清除所有token并跳转登录
-                        localStorage.removeItem('token')
-                        localStorage.removeItem('refreshToken')
-                        localStorage.removeItem('tokenExpiry')
-                        localStorage.removeItem('rememberedLogin')
-                        window.location.href = '/login'
+                        clearAuthStorage()
+                        const isAdminPath = window.location.pathname.startsWith('/admin')
+                        const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+                        window.location.href = isAdminPath ? `/login?mode=admin&redirect=${redirect}` : `/login?redirect=${redirect}`
                         return Promise.reject(error)
                     })
                 } else {
@@ -124,10 +140,10 @@ service.interceptors.response.use(
     error => {
         if (error.response?.status === 401) {
             // Token过期处理
-            localStorage.removeItem('token')
-            localStorage.removeItem('refreshToken')
-            localStorage.removeItem('tokenExpiry')
-            window.location.href = '/login'
+            clearAuthStorage()
+            const isAdminPath = window.location.pathname.startsWith('/admin')
+            const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+            window.location.href = isAdminPath ? `/login?mode=admin&redirect=${redirect}` : `/login?redirect=${redirect}`
         }
         return Promise.reject(error)
     }

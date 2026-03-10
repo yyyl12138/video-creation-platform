@@ -2,65 +2,60 @@
   <div class="common-layout">
     <el-container>
       <el-aside width="200px">
-        <el-menu
-          router
-          default-active="2"
-          class="el-menu-vertical-demo"
-          background-color="#545c64"
-          text-color="#fff"
-          active-text-color="#ffd04b">
-          
-          <el-menu-item index="/dashboard">
-            <el-icon><Menu /></el-icon>
-            <span>控制台 (Dashboard)</span>
-          </el-menu-item>
+          <el-menu
+            router
+            default-active="/dashboard"
+            class="el-menu-vertical-demo"
+            background-color="#545c64"
+            text-color="#fff"
+            active-text-color="#ffd04b"
+          >
+            <!-- 控制台 -->
+            <el-menu-item index="/dashboard">
+              <el-icon><Menu /></el-icon>
+              <span>控制台</span>
+            </el-menu-item>
 
-          <el-sub-menu index="1">
-            <template #title>
+            <!-- 用户中心 -->
+            <el-menu-item index="/user/profile">
               <el-icon><User /></el-icon>
-              <span>用户中心 (User)</span>
-            </template>
-            <el-menu-item index="/user/profile">个人资料</el-menu-item>
-            <el-menu-item index="/user/wallet">我的钱包</el-menu-item>
-          </el-sub-menu>
+              <span>个人资料</span>
+            </el-menu-item>
+            <el-menu-item index="/user/wallet">
+              <el-icon><User /></el-icon>
+              <span>我的钱包</span>
+            </el-menu-item>
 
-          <el-sub-menu index="2">
-            <template #title>
+            <!-- 媒资管理 -->
+            <el-menu-item index="/material/list">
               <el-icon><Folder /></el-icon>
-              <span>媒资管理 (Material)</span>
-            </template>
-            <el-menu-item index="/material/list">素材库</el-menu-item>
-            <el-menu-item index="/material/template">模板库</el-menu-item>
-          </el-sub-menu>
+              <span>素材库</span>
+            </el-menu-item>
+            <el-menu-item index="/material/template">
+              <el-icon><Folder /></el-icon>
+              <span>模板库</span>
+            </el-menu-item>
 
-          <el-sub-menu index="3">
-            <template #title>
+            <!-- 创作中心 -->
+            <el-menu-item index="/creation/generation">
               <el-icon><VideoCamera /></el-icon>
-              <span>创作中心 (Creation)</span>
-            </template>
-            <el-menu-item index="/creation/generation">AI 创作</el-menu-item>
-            <el-menu-item index="/creation/task">任务管理</el-menu-item>
-            <el-menu-item index="/creation/project">剪辑工程</el-menu-item>
-          </el-sub-menu>
+              <span>AI 创作</span>
+            </el-menu-item>
+            <el-menu-item index="/creation/task">
+              <el-icon><VideoCamera /></el-icon>
+              <span>任务管理</span>
+            </el-menu-item>
+            <el-menu-item index="/creation/project">
+              <el-icon><VideoCamera /></el-icon>
+              <span>剪辑工程</span>
+            </el-menu-item>
 
-          <el-sub-menu index="4">
-            <template #title>
+            <!-- 社区互动 -->
+            <el-menu-item index="/community/feed">
               <el-icon><ChatDotRound /></el-icon>
-              <span>社区互动 (Community)</span>
-            </template>
-            <el-menu-item index="/community/feed">视频流</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="5">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>系统管理 (Admin)</span>
-            </template>
-            <el-menu-item index="/admin/review">内容审核</el-menu-item>
-            <el-menu-item index="/admin/config">系统配置</el-menu-item>
-          </el-sub-menu>
-
-        </el-menu>
+              <span>社区视频流</span>
+            </el-menu-item>
+          </el-menu>
       </el-aside>
       <el-container>
         <el-header>
@@ -79,7 +74,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Menu, User, Folder, VideoCamera, ChatDotRound, Setting } from '@element-plus/icons-vue'
+import { Menu, User, Folder, VideoCamera, ChatDotRound } from '@element-plus/icons-vue'
 
 const router = useRouter()
 

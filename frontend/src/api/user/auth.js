@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { setTokens, setUserInfo, clearAuthStorage as clearAuthStorageUtil } from '@/utils/auth'
 
 /**
  * 发送验证码
@@ -26,10 +27,9 @@ export function loginByPassword(account, password) {
   }).then(res => {
     // 存储token信息
     if (res.data) {
-      const { token, refreshToken } = res.data
-      localStorage.setItem('token', token)
-      localStorage.setItem('refreshToken', refreshToken)
-      localStorage.setItem('tokenExpiry', Date.now() + 2 * 60 * 60 * 1000) // 2小时有效期
+      const { token, refreshToken, expireIn, userInfo } = res.data
+      setTokens({ token, refreshToken, expireIn })
+      if (userInfo) setUserInfo(userInfo)
     }
     return res
   })
@@ -48,10 +48,9 @@ export function loginBySms(phone, code) {
   }).then(res => {
     // 存储token信息
     if (res.data) {
-      const { token, refreshToken } = res.data
-      localStorage.setItem('token', token)
-      localStorage.setItem('refreshToken', refreshToken)
-      localStorage.setItem('tokenExpiry', Date.now() + 2 * 60 * 60 * 1000) // 2小时有效期
+      const { token, refreshToken, expireIn, userInfo } = res.data
+      setTokens({ token, refreshToken, expireIn })
+      if (userInfo) setUserInfo(userInfo)
     }
     return res
   })
@@ -115,13 +114,8 @@ export function logout() {
  * 清理所有认证相关的本地存储
  */
 export function clearAuthStorage() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refreshToken')
-  localStorage.removeItem('tokenExpiry')
-  localStorage.removeItem('rememberedLogin')
-  // 清除设备相关信息（用于多设备管理）
-  const deviceKeys = Object.keys(localStorage).filter(key => key.startsWith('device_'))
-  deviceKeys.forEach(key => localStorage.removeItem(key))
+  // 兼容老代码：保留此导出，但委托给 utils/auth
+  clearAuthStorageUtil()
 }
 
 /**
