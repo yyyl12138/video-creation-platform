@@ -429,4 +429,40 @@ public class CreationServiceImpl implements CreationService {
         }
         return null;
     }
+
+    @Override
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<AiTask> getHistoryTasks(String userId, int page, int size, String status, String taskType) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<AiTask> pageParam = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+        LambdaQueryWrapper<AiTask> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AiTask::getUserId, userId);
+
+        if (status != null && !status.isEmpty()) {
+            Integer statusCode = mapStatusStringToInt(status);
+            if (statusCode != null) {
+                wrapper.eq(AiTask::getStatus, statusCode);
+            }
+        }
+
+        if (taskType != null && !taskType.isEmpty()) {
+            Integer typeCode = TaskTypeEnum.fromName(taskType).getCode();
+            if (typeCode != null) {
+                wrapper.eq(AiTask::getTaskType, typeCode);
+            }
+        }
+
+        wrapper.orderByDesc(AiTask::getCreatedAt);
+
+        return aiTaskMapper.selectPage(pageParam, wrapper);
+    }
+    
+    private Integer mapStatusStringToInt(String status) {
+        switch (status.toUpperCase()) {
+            case "PENDING": return STATUS_PENDING;
+            case "PROCESSING": return STATUS_PROCESSING;
+            case "SUCCESS": return STATUS_SUCCESS;
+            case "FAILED": return STATUS_FAILED;
+            case "CANCELLED": return STATUS_CANCELLED;
+            default: return null;
+        }
+    }
 }
