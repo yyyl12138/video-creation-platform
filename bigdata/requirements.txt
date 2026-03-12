@@ -1,0 +1,9 @@
+flask==2.0.3
+flask-cors==3.0.10
+flask-socketio==5.3.4
+python-socketio==5.8.0
+python-engineio==4.5.1
+kafka-python==2.0.2
+Werkzeug==2.0.3
+Jinja2==3.0.3
+markupsafe==2.0.1
