@@ -99,6 +99,8 @@ const router = createRouter({
                 { path: 'rules', component: () => import('../views/admin/ReviewRules.vue') },
                 { path: 'models', component: () => import('../views/admin/ModelTtsManagement.vue') },
                 { path: 'stats', component: () => import('../views/admin/AdminStats.vue') },
+                { path: 'bigdata', component: () => import('../views/admin/BigdataDashboard.vue') },
+                { path: 'realtime', component: () => import('../views/admin/RealtimeDashboard.vue') },
                 { path: 'finance', component: () => import('../views/admin/FinanceReport.vue') },
                 { path: 'config', component: () => import('../views/admin/SystemConfig.vue') }
             ]

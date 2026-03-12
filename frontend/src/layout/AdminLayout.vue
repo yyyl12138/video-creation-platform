@@ -21,6 +21,14 @@
             <el-icon><DataAnalysis /></el-icon>
             <span>运营看板</span>
           </el-menu-item>
+          <el-menu-item index="/admin/bigdata">
+            <el-icon><TrendCharts /></el-icon>
+            <span>离线看板</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/realtime">
+            <el-icon><Monitor /></el-icon>
+            <span>实时看板</span>
+          </el-menu-item>
           <el-menu-item index="/admin/users">
             <el-icon><User /></el-icon>
             <span>用户管理</span>
@@ -120,11 +128,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Cpu,
+  Cpu,
   DataAnalysis,
   Finished,
   FolderOpened,
   Memo,
+  Monitor,
   Setting,
+  TrendCharts,
   User,
   Wallet
 } from '@element-plus/icons-vue'
