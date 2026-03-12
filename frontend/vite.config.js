@@ -19,6 +19,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path
       },
+      '/bigdata-api': {
+        target: 'http://192.168.101.99:5001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/bigdata-api/, '')
+      },
       '/profile': {
         target: 'http://localhost:8080',
         changeOrigin: true,
