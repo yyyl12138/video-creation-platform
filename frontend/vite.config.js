@@ -20,7 +20,7 @@ export default defineConfig({
         rewrite: (path) => path
       },
       '/bigdata-api': {
-        target: 'http://192.168.101.99:5001',
+        target: '221affc5.r40.cpolar.top',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/bigdata-api/, '')
       },
