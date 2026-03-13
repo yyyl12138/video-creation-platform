@@ -414,9 +414,9 @@ if __name__ == "__main__":
     print("大数据平台 - 统一后端服务")
     print(f"Hive:  {HIVE_METASTORE}/{DB}")
     print(f"Kafka: {KAFKA_SERVERS}")
-    print("离线API: http://0.0.0.0:5001/api/offline/*")
-    print("实时API: http://0.0.0.0:5001/api/realtime/snapshot")
-    print("WebSocket: ws://0.0.0.0:5001")
+    print("离线API: http://192.168.88.161:5000/api/offline/*")
+    print("实时API: http://192.168.88.161:5000/api/realtime/snapshot")
+    print("WebSocket: ws://192.168.88.161:5000")
     print("="*60)
 
     # 预热 Spark（后台线程，避免阻塞Kafka消费）
@@ -426,4 +426,4 @@ if __name__ == "__main__":
     for topic, handler in [("user_events",handle_user),("task_events",handle_task),("payment_events",handle_payment)]:
         threading.Thread(target=kafka_thread, args=(topic,handler), daemon=True).start()
 
-    socketio.run(app, host="0.0.0.0", port=5001, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="192.168.88.161", port=5000, debug=False, allow_unsafe_werkzeug=True)
