@@ -4,14 +4,21 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 修正后的URL（选择一种）
-
-    # 方案B：兼容性更好
+    # 修正后的URL（兼容性更好）
     url: jdbc:mysql://localhost:3306/video_generation_platform?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-
     username: root
-    # [TODO] 队友请修改: 你的本地数据库密码
-    password: 123456
+    password: y18275321140
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 15
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: DatebookHikariCP
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
+
 
   # Redis Configuration
   data:
@@ -53,6 +60,9 @@ sa-token:
   is-log: false
   # [TODO] 队友请注意: 开发环境可用此Demo Key，生产环境务必修改
   jwt-secret-key: helloworld123helloworld123helloworld123 # Demo Key
+  # 排除路径 (Filter鉴权排除)
+  filter:
+    exclude-list: /storage/**,/favicon.ico,/doc.html,/webjars/**,/v3/api-docs/**,/api/v1/callbacks/**
 
 # Knife4j Configuration
 knife4j:
@@ -63,13 +73,39 @@ knife4j:
 # Custom File Path Config
 file:
   # [TODO] 队友请修改: [重要] 必须改为你电脑上的本地绝对路径！用于存储上传的文件
-  upload-path: G:/ShiXi/xiangmu/upload
+  upload-path: /Users/yangli/Documents/自动化短视频创作平台/storage
 
+# 短信服务配置 (阿里云号码认证服务)
 sms:
   aliyun:
-    enabled: false
-    access-key-id:
-    access-key-secret:
-    sign-name:
-    template-code:
+    # 短信服务总开关
+    enabled: true
+    
+    # 阿里云访问密钥
+    access-key-id: your-access-key-id
+    access-key-secret: your-access-key-secret
+    
+    # 短信签名 (从用户示例代码获取)
+    sign-name: 速通互联验证码
+    
+    # 短信模板CODE
+    template-code: "100001"
+    
+    # 阿里云服务区域ID
     region-id: cn-hangzhou
+
+# 支付宝沙盒配置
+alipay:
+  sandbox: true
+  gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+  # [TODO] 请填写您的沙盒AppID
+  app-id: "9021000162618270"
+  # [TODO] 请填写商户应用私钥 (PKCS8 格式)
+  private-key: "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCJQhB/kJjriq7Puzi3hzaNO89J55MlBPFF1meXrvjRbLJsFQHuMnfffF+pe6Bn3YHRP1ILN/m52weLWBn8EcvXJxqfFiWdR7MdGZl/sQzi9VPG5dqIHuRp1TJc/gLKoJLJR3iBsY63Sul58IpU5nOG6p1FnwsiUzkQuwg+Kuo8/AjUszJ+sef+zN4t/8xhwiT1+r1kkFT/VNWycJGquVeFgcvS63iy9GyzNT4h4y9T+U8pTQRo4x6kDA414aYoPYTi2s0bF94DIeuURKIZ9GPemUOQBYqmk0o4S5YR0PolJ1+SCxBwmdp/Hu1EgMiTDte6RJF948ppbnRoPq6lDUYbAgMBAAECggEAdchZO/4rG0SgieXQ37yJ1VxTnsm3fPbmy9UWhBVDswKhgRnt1Cc+smqZ9Gf/1+E+uv6pOrNH+nK34J0zfxkOYIxPzeBFWtfiHcCP9gFKW5/FylIH2vMXcrHeS+o1Hwf3rf1ErZZeL297NoZxTjWLQWUmnE3EUio0N+UnR6Gv66/au1X/YDqfFGrz5wTMhfEZYzBPKmvgJ/QncJCwvtASrxME6F6YfuBq3Xb+kbHQGmTWjr7LAmjZVBOLRxxgeYplWraZ+z3BcdMvvVpPnBDPSjlDtmKyJyNfflmAXVgTsw3oGKjn+pXxcg5Hwi5//wvoxUyTeEbU0k333haTOQ9u4QKBgQDl5+BQA8ipxH3vbsynCJ3HXVZhGWR9zbcUXtC3YRSmk2yW5WtdrTXRzZlkFFfcfZuFWCzyfR+qXXF/6kHF0gLKDmYaXmgXmF6q+L6k1Oiyw8Sl3WtLB+55aBEKASiUFe5yE43YwS8LNBBZtVGA0/3XJgpof14pTer8x3sNfeDZAwKBgQCY1jlSTjgBoC8MYY0Y3O+HMR61s8qkVGI1JYU1Oz70VqrAeFUC+L1ZkOLWN4fpEsb94rCugdGoa5S0bgWJCZGBsjvGmmIhsoJ/FkGj1nlDbBd+2GIJdbRc2tubC/LuAb2rmHfFM+IXpNyWFpJQhltkqil++qtoF48JtDxokoI3CQKBgAjxJNtX2lUoDFHkuFcC0cgwTCzIpQzzlFxZd7q6LuhvsXiJAc0J8J7xZTbsR6KOzB66mDzyOuoQalq0TMyZ53veZYA/DcNlLMFvnVKh6U8SqDJfU03+x/q23nrKIr7nv3d2ZTz5/o9r/frPP5VIKYZVt2/rDEmE+0/LnnCe5cDrAoGABl09S9EYAfFSpDhXsMZabw27kqNm98rPwBjM4DeUWoZVW+hm2dXTxKwE1hi/3xO6F45d/xZGzbWVHqJKNregSH9Mf+uj1HVje7lIiHMA367bl5uZEX3GQeuXI3Cu7/xAkqmpqxuK+aMS0GkmNJYzrhBr4+66Pn5kpWnM7inTpEkCgYAK5xDMtftcYeXYa7UmRw1iYjRg8eGowukmsINENLHlBkLGjDD8DI1x2Vtm2XarygzNXFkLXeswU7iADLzgj3NL+3ZeEP9G1MAziAk1ipyptsHH+t55CzesjcuebCH4w3uH3o2XKFDGLBOBcqEEV1eSFCowH+uY/h+xTcJFGW+6VA=="
+  # [TODO] 请填写支付宝公钥
+  alipay-public-key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjKVCt/3T4jUcS9k3icLKUr+x5BOnG4MUqkfnstgY3IG6mR+xT8lbgYK3xtA8yerTvjceS/xulkensY/+AvT4mXRN7si9wSPyhzA24JP/aRm9sHT0gpNYLoXucomySqvCKHEq/XHfLZg0iXCMDrsINUooAMWNZKx5KGDLlZeqtaJYZztgH8/FKLIneX89HxZbbavCLArr+kqU7u73gA4tNno+sehKomiq0kuBb14dcoNq7NinogrPhyT6oNCxROlbOLBNt2YDRddaGwujb3pSX2TUMHw/x4E4ktH2TfM+iSplK5HJefQKgPpJMqBdJj1H6mC7vUzyIeZAiQXKaShD1wIDAQAB"
+  sign-type: RSA2
+  # [TODO] 请填写外网穿透地址 (如 ngrok)，用于接收支付宝异步回调
+  notify-url: "http://t28679d6.natappfree.cc"
+  # 前端支付成功后的跳转地址
+  return-url: "http://localhost:3000/payment/success"

@@ -1,0 +1,9 @@
+package com.huike.video.modules.sys.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.huike.video.modules.sys.entity.AiModel;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface AiModelMapper extends BaseMapper<AiModel> {
+}
