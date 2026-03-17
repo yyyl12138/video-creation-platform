@@ -137,9 +137,19 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (request.getRoleId() != null) {
-            Role role = roleService.getSelectableRoleById(request.getRoleId());
-            updateUserRole(user.getId(), role.getId());
-            user.setRoleId(role.getId());
+            // 特殊处理管理员角色登录
+            if (Objects.equals(request.getRoleId(), 2L)) {
+                if (!Objects.equals(user.getRoleId(), 2L)) {
+                    throw new BusinessException(10007, "无权限以管理员身份登录");
+                }
+                // 已经是管理员，无需更新角色
+            } else {
+                Role role = roleService.getSelectableRoleById(request.getRoleId());
+                if (!Objects.equals(user.getRoleId(), role.getId())) {
+                    updateUserRole(user.getId(), role.getId());
+                }
+                user.setRoleId(role.getId());
+            }
         }
 
         StpUtil.login(user.getId());
