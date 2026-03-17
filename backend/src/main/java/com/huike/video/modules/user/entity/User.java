@@ -31,4 +31,8 @@ public class User extends BaseEntity {
     private Integer status;
 
     private Long roleId;
+
+    // 会员相关扩展字段
+    private Integer vipLevel; // 0-非会员, 1-月度会员, 2-年度会员 等
+    private LocalDateTime vipExpireTime;
 }

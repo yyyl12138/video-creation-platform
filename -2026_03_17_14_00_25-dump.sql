@@ -138,6 +138,37 @@ LOCK TABLES `audio_materials` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `comments`
+--
+
+DROP TABLE IF EXISTS `comments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `comments` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(32) NOT NULL,
+  `target_id` varchar(32) NOT NULL COMMENT '模版ID',
+  `parent_id` bigint NOT NULL DEFAULT '0',
+  `content` varchar(500) NOT NULL,
+  `like_count` int DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_target_id` (`target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `comments`
+--
+
+LOCK TABLES `comments` WRITE;
+/*!40000 ALTER TABLE `comments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `comments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `content_reviews`
 --
 
@@ -323,6 +354,39 @@ INSERT INTO `image_materials` VALUES ('c8a74fda76c64e53b5b023e5d7c68252','817619
 UNLOCK TABLES;
 
 --
+-- Table structure for table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(32) NOT NULL,
+  `type` varchar(20) NOT NULL COMMENT 'SYSTEM, LIKE, FOLLOW, COMMENT, PURCHASE',
+  `title` varchar(200) DEFAULT NULL,
+  `content` varchar(500) DEFAULT NULL,
+  `related_id` varchar(32) DEFAULT NULL COMMENT '关联业务ID',
+  `is_read` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0-未读, 1-已读',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_type` (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notifications`
+--
+
+LOCK TABLES `notifications` WRITE;
+/*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `operation_logs`
 --
 
@@ -362,6 +426,46 @@ CREATE TABLE `operation_logs` (
 LOCK TABLES `operation_logs` WRITE;
 /*!40000 ALTER TABLE `operation_logs` DISABLE KEYS */;
 /*!40000 ALTER TABLE `operation_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payment_orders`
+--
+
+DROP TABLE IF EXISTS `payment_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_orders` (
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键ID',
+  `order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '系统内订单号',
+  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '所属用户ID',
+  `order_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '订单类型: RECHARGE, VIP_SUBSCRIPTION, TEMPLATE_PURCHASE',
+  `amount` decimal(15,4) NOT NULL COMMENT '订单金额',
+  `pay_channel` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '支付渠道: ALIPAY, WECHAT, BALANCE',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING, PAID, CANCELLED, REFUNDED',
+  `external_trade_no` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '第三方交易流水号',
+  `biz_content` json DEFAULT NULL COMMENT '业务拓展参数',
+  `subject` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '订单标题',
+  `paid_time` datetime DEFAULT NULL COMMENT '实际支付时间',
+  `expire_time` datetime DEFAULT NULL COMMENT '订单过期时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='支付订单表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payment_orders`
+--
+
+LOCK TABLES `payment_orders` WRITE;
+/*!40000 ALTER TABLE `payment_orders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -478,7 +582,7 @@ CREATE TABLE `roles` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='角色表';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='角色表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -487,7 +591,7 @@ CREATE TABLE `roles` (
 
 LOCK TABLES `roles` WRITE;
 /*!40000 ALTER TABLE `roles` DISABLE KEYS */;
-INSERT INTO `roles` VALUES (1,'ROLE_USER','普通用户','2026-01-27 15:16:21','2026-01-27 15:16:21',0);
+INSERT INTO `roles` VALUES (1,'ROLE_USER','普通用户','2026-01-27 15:16:21','2026-01-27 15:16:21',0),(2,'ROLE_ADMIN','管理员','2026-03-17 10:13:50','2026-03-17 10:13:59',0);
 /*!40000 ALTER TABLE `roles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -813,6 +917,34 @@ LOCK TABLES `user_generated_content` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `user_interactions`
+--
+
+DROP TABLE IF EXISTS `user_interactions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_interactions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(32) NOT NULL,
+  `target_id` varchar(32) NOT NULL COMMENT '模版ID或被关注人ID',
+  `action_type` varchar(20) NOT NULL COMMENT 'LIKE_TEMPLATE, FOLLOW_USER',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_uid_tid_type` (`user_id`,`target_id`,`action_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_interactions`
+--
+
+LOCK TABLES `user_interactions` WRITE;
+/*!40000 ALTER TABLE `user_interactions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_interactions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `user_profiles`
 --
 
@@ -847,6 +979,34 @@ LOCK TABLES `user_profiles` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `user_purchased_templates`
+--
+
+DROP TABLE IF EXISTS `user_purchased_templates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_purchased_templates` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(32) NOT NULL,
+  `template_id` varchar(32) NOT NULL,
+  `price_paid` decimal(10,2) DEFAULT '0.00',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_tpl` (`user_id`,`template_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_purchased_templates`
+--
+
+LOCK TABLES `user_purchased_templates` WRITE;
+/*!40000 ALTER TABLE `user_purchased_templates` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_purchased_templates` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `user_wallets`
 --
 
@@ -873,7 +1033,7 @@ CREATE TABLE `user_wallets` (
 
 LOCK TABLES `user_wallets` WRITE;
 /*!40000 ALTER TABLE `user_wallets` DISABLE KEYS */;
-INSERT INTO `user_wallets` VALUES ('W2026013081116','U2026013035276',985.0000,1000.0000,15.0000,'2026-01-30 17:15:41','2026-02-02 10:19:21',0),('wallet-test-001','test-user-001',957.7310,1000.0000,42.2690,'2026-01-27 15:16:21','2026-01-27 20:32:53',0);
+INSERT INTO `user_wallets` VALUES ('W2026013081116','U2026013035276',985.0000,1000.0000,15.0000,'2026-01-30 17:15:41','2026-02-02 10:19:21',0),('W2026031071516','U2026031019284',0.0000,0.0000,0.0000,'2026-03-10 10:42:35','2026-03-10 10:42:35',0),('W2026031288001','U2026031230826',0.0000,0.0000,0.0000,'2026-03-12 15:53:48','2026-03-12 15:53:48',0),('wallet-test-001','test-user-001',957.7310,1000.0000,42.2690,'2026-01-27 15:16:21','2026-01-27 20:32:53',0);
 /*!40000 ALTER TABLE `user_wallets` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -894,6 +1054,8 @@ CREATE TABLE `users` (
   `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-正常, 2-封禁, 3-注销',
   `role_id` bigint unsigned NOT NULL COMMENT '角色ID',
+  `vip_level` int DEFAULT '0' COMMENT 'VIP等级: 0-普通用户, 1-月度会员, 2-年度会员',
+  `vip_expire_time` datetime DEFAULT NULL COMMENT 'VIP过期时间',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -910,7 +1072,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('test-user-001','test_user','test@example.com','$2a$10$7JB720yubVSZv5W56jdx.euT/8uzRNiJ9.gG.qD.Ibonn7.x./nwu',NULL,NULL,NULL,1,1,'2026-01-27 15:16:21','2026-02-02 09:17:44'),('U2026013035276','tzfirstnoob','3107201641@qq.com','$2a$10$GHubTQgPU76fp7vQF50NUuxDbt93qUrZq1Lvi4k2Gf4gAUJqfTpDe','/storage/avatar/U2026013035276_1769958516424.jpg','18286133350',NULL,1,1,'2026-01-30 17:15:40','2026-02-02 09:22:07');
+INSERT INTO `users` VALUES ('test-user-001','test_user','test@example.com','$2a$10$7JB720yubVSZv5W56jdx.euT/8uzRNiJ9.gG.qD.Ibonn7.x./nwu',NULL,NULL,NULL,1,1,0,NULL,'2026-01-27 15:16:21','2026-02-02 09:17:44'),('U2026013035276','tzfirstnoob','3107201641@qq.com','$2a$10$GHubTQgPU76fp7vQF50NUuxDbt93qUrZq1Lvi4k2Gf4gAUJqfTpDe','/storage/avatar/U2026013035276_1769958516424.jpg','18286133350',NULL,1,2,0,NULL,'2026-01-30 17:15:40','2026-03-17 10:14:29'),('U2026031019284','huhansan',NULL,'$2a$10$rsj0e4B1Hf.2TnwR8yl4aOA2eyIM.rGsC.wL9mGft82tREMbdeDNq',NULL,'18286378154',NULL,1,1,0,NULL,'2026-03-10 10:42:34','2026-03-10 10:42:34'),('U2026031230826','huhansan3',NULL,'$2a$10$bxaMyi3Jkt45lTU1826jDOcxg1ZSNQuYrbV2.VJpN/p0Kczz7HeHe',NULL,'13985704750',NULL,1,1,0,NULL,'2026-03-12 15:53:48','2026-03-12 15:53:48');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1005,9 +1167,11 @@ CREATE TABLE `video_templates` (
   `template_file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '模板文件路径',
   `creator_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '创建者ID',
   `usage_count` int DEFAULT '0' COMMENT '使用次数',
+  `like_count` int NOT NULL DEFAULT '0' COMMENT '点赞数',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 1-启用, 2-禁用, 3-草稿',
   `tags` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '标签',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
+  `price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '售价,0为免费',
   `config_json` json DEFAULT NULL COMMENT '模板配置',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -1071,4 +1235,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-04 11:29:39
+-- Dump completed on 2026-03-17 14:03:04

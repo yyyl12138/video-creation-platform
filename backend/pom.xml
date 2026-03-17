@@ -141,6 +141,13 @@
              <artifactId>tea-openapi</artifactId>
              <version>0.3.6</version>
          </dependency>
+         
+         <!-- Alipay SDK -->
+         <dependency>
+             <groupId>com.alipay.sdk</groupId>
+             <artifactId>alipay-sdk-java</artifactId>
+             <version>4.40.272.ALL</version>
+         </dependency>
              
     </dependencies>
 

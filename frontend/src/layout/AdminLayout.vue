@@ -128,7 +128,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Cpu,
-  Cpu,
   DataAnalysis,
   Finished,
   FolderOpened,
