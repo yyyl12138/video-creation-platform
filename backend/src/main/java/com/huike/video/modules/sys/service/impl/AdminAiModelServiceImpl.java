@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huike.video.common.exception.BusinessException;
 import com.huike.video.modules.sys.dto.AiModelRequest;
-import com.huike.video.modules.sys.entity.AiModel;
-import com.huike.video.modules.sys.mapper.AiModelMapper;
+import com.huike.video.modules.creation.domain.entity.AiModel;
+import com.huike.video.modules.creation.mapper.AiModelMapper;
 import com.huike.video.modules.sys.service.AiModelService;
 import com.huike.video.modules.sys.vo.AiModelResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AiModelServiceImpl implements AiModelService {
+public class AdminAiModelServiceImpl implements AiModelService {
 
     private final AiModelMapper aiModelMapper;
 
