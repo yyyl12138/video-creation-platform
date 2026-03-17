@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const s = axios.create({ baseURL: '/bigdata-api/api/offline', timeout: 30000 })
+const s = axios.create({ baseURL: '/api/offline', timeout: 30000 })
 s.interceptors.response.use(r => r.data, e => { console.error('[Offline API]', e); return Promise.reject(e) })
 
 export const fetchKpi = () => s.get('/kpi')
