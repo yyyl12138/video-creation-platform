@@ -18,4 +18,12 @@ public interface UserService {
     UploadAvatarResponse uploadMyAvatar(MultipartFile file, String baseUrl);
 
     Boolean applyCreator(ApplyCreatorRequest request);
+
+    Boolean deleteMyAccount();
+
+    com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.huike.video.modules.user.vo.AdminUserPageVO> getAdminUserPage(Integer page, Integer size, String keyword, String status);
+
+    Boolean updateUserStatus(String userId, Integer status, String reason);
+
+    UserMeResponse getUserDetailForAdmin(String userId);
 }

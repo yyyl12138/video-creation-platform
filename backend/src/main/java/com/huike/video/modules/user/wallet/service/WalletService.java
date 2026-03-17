@@ -49,4 +49,14 @@ public interface WalletService {
      * @return 钱包余额，如果不存在返回 BigDecimal.ZERO
      */
     BigDecimal getBalanceByUserId(String userId);
+
+    /**
+     * 充值到用户余额（原子操作），并记录交易流水
+     * @param userId 用户ID
+     * @param amount 充值金额
+     * @param relatedTaskId 关联订单ID/任务ID
+     * @param description 交易描述
+     * @return 是否成功
+     */
+    boolean rechargeBalance(String userId, BigDecimal amount, String relatedTaskId, String description);
 }

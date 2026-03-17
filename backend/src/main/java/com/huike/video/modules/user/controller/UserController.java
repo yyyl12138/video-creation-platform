@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +32,11 @@ public class UserController {
     @GetMapping("/me")
     public Result<UserMeResponse> me() {
         return Result.success(userService.getMe());
+    }
+
+    @DeleteMapping("/me")
+    public Result<Boolean> deleteMyAccount() {
+        return Result.success(userService.deleteMyAccount());
     }
 
     @PutMapping("/me/profile")

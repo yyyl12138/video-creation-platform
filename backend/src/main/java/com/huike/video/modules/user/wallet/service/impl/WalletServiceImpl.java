@@ -225,6 +225,55 @@ public class WalletServiceImpl implements WalletService {
         return wallet.getBalance();
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean rechargeBalance(String userId, BigDecimal amount, String relatedTaskId, String description) {
+        if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Invalid recharge parameters: userId={}, amount={}", userId, amount);
+            return false;
+        }
+
+        // 1. 获取钱包信息，如果不存在则创建一个
+        UserWallet wallet = userWalletMapper.selectOne(new LambdaQueryWrapper<UserWallet>()
+                .eq(UserWallet::getUserId, userId)
+                .last("limit 1"));
+        
+        if (wallet == null) {
+            wallet = new UserWallet();
+            wallet.setId(IdUtil.simpleUUID());
+            wallet.setUserId(userId);
+            wallet.setBalance(amount);
+            wallet.setTotalRecharged(amount);
+            wallet.setTotalConsumed(BigDecimal.ZERO);
+            userWalletMapper.insert(wallet);
+        } else {
+            // 2. 原子性增加余额
+            LambdaUpdateWrapper<UserWallet> wrapper = new LambdaUpdateWrapper<>();
+            wrapper.eq(UserWallet::getId, wallet.getId())
+                   .setSql("balance = balance + " + amount)
+                   .setSql("total_recharged = total_recharged + " + amount);
+
+            int rows = userWalletMapper.update(null, wrapper);
+            if (rows == 0) {
+                log.warn("Recharge balance failed for userId={}, amount={}", userId, amount);
+                return false;
+            }
+        }
+
+        // 3. 插入交易流水
+        WalletTransaction transaction = new WalletTransaction();
+        transaction.setId(IdUtil.simpleUUID());
+        transaction.setWalletId(wallet.getId());
+        transaction.setType(TRANSACTION_TYPE_RECHARGE);
+        transaction.setAmount(amount); // 充值为正数
+        transaction.setRelatedTaskId(relatedTaskId);
+        transaction.setDescription(description);
+        walletTransactionMapper.insert(transaction);
+
+        log.info("Recharged {} to user {} wallet, transaction={}", amount, userId, transaction.getId());
+        return true;
+    }
+
     /**
      * 解析交易类型字符串为整数
      */

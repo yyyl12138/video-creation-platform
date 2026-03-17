@@ -47,6 +47,12 @@ public class VideoTemplate extends BaseEntity {
 
     /** 描述 */
     private String description;
+    
+    /** 价格 */
+    private java.math.BigDecimal price;
+    
+    /** 点赞数 */
+    private Integer likeCount;
 
     /** 模板配置 (JSON) */
     private String configJson;
