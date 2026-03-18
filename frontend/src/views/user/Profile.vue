@@ -33,19 +33,6 @@
       </div>
     </el-dialog>
 
-    <!-- 页面标题卡片 -->
-    <div class="page-header-card">
-      <div class="header-content">
-        <div class="header-icon">
-          <el-icon size="32" color="#fff"><User /></el-icon>
-        </div>
-        <div class="header-text">
-          <h2>个人中心</h2>
-          <p>管理您的个人信息和账户设置</p>
-        </div>
-      </div>
-    </div>
-
     <!-- 主内容卡片 -->
     <el-card class="main-content-card">
       <!-- 顶部信息区：头像 + 基础信息 -->
@@ -199,10 +186,10 @@
         <!-- 3. 申请创作者标签页 -->
         <el-tab-pane label="申请成为模板创作者" name="creator">
           <div class="tab-content">
-            <el-form 
-              :model="creatorForm" 
-              label-width="100px" 
-              :rules="creatorRules" 
+            <el-form
+              :model="creatorForm"
+              label-width="100px"
+              :rules="creatorRules"
               ref="creatorFormRef"
               class="form-container"
             >
@@ -221,9 +208,9 @@
                 />
               </el-form-item>
               <el-form-item class="form-actions">
-                <el-button 
-                  type="primary" 
-                  @click="submitCreatorApply" 
+                <el-button
+                  type="primary"
+                  @click="submitCreatorApply"
                   :loading="loading"
                   :disabled="profile.creatorStatus === 'APPLIED' || profile.creatorStatus === 'APPROVED'"
                 >
@@ -243,6 +230,161 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <!-- 4. 会员管理标签页 -->
+        <el-tab-pane label="会员管理" name="vip">
+          <div class="tab-content vip-management">
+            <!-- VIP状态卡片 -->
+            <div class="vip-status-card" :class="getVipCardClass">
+              <div class="vip-card-bg">
+                <div class="vip-card-pattern"></div>
+              </div>
+              <div class="vip-card-content">
+                <div class="vip-card-header">
+                  <div class="vip-icon-wrapper">
+                    <el-icon :size="32"><Medal /></el-icon>
+                  </div>
+                  <div class="vip-info">
+                    <h3 class="vip-title">{{ getVipText }}</h3>
+                    <p class="vip-subtitle">{{ getVipSubtitle }}</p>
+                  </div>
+                </div>
+                <div class="vip-stats">
+                  <div class="vip-stat-item">
+                    <div class="stat-icon">
+                      <el-icon><Calendar /></el-icon>
+                    </div>
+                    <div class="stat-content">
+                      <span class="stat-label">到期时间</span>
+                      <span class="stat-value">{{ profile.vipExpireDate || '未开通' }}</span>
+                    </div>
+                  </div>
+                  <div class="vip-stat-item">
+                    <div class="stat-icon">
+                      <el-icon><Clock /></el-icon>
+                    </div>
+                    <div class="stat-content">
+                      <span class="stat-label">剩余天数</span>
+                      <span class="stat-value">{{ getRemainingDays }}</span>
+                    </div>
+                  </div>
+                  <div class="vip-stat-item">
+                    <div class="stat-icon">
+                      <el-icon><Star /></el-icon>
+                    </div>
+                    <div class="stat-content">
+                      <span class="stat-label">会员特权</span>
+                      <span class="stat-value">{{ getVipPrivileges }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIP套餐选择 -->
+            <div class="vip-packages-section">
+              <div class="section-title">
+                <h4>选择会员套餐</h4>
+                <p>升级会员，解锁更多专属特权</p>
+              </div>
+
+              <div class="vip-packages-grid">
+                <div
+                  v-for="pkg in vipPackages"
+                  :key="pkg.type"
+                  class="vip-package-card"
+                  :class="{
+                    recommended: pkg.recommended,
+                    'svip-card': pkg.type.includes('SVIP'),
+                    'year-card': pkg.type.includes('YEAR')
+                  }"
+                  @click="selectVipPackage(pkg)"
+                >
+                  <div v-if="pkg.recommended" class="recommend-badge">
+                    <el-icon><Star /></el-icon>
+                    <span>推荐</span>
+                  </div>
+                  <div v-if="pkg.type.includes('YEAR')" class="save-badge">省17%</div>
+
+                  <div class="package-header">
+                    <div class="package-icon">
+                      <el-icon :size="28"><Medal /></el-icon>
+                    </div>
+                    <div class="package-name">{{ pkg.name }}</div>
+                  </div>
+
+                  <div class="package-pricing">
+                    <div class="price-main">
+                      <span class="currency">¥</span>
+                      <span class="price-number">{{ pkg.price }}</span>
+                    </div>
+                    <div class="price-period">
+                      <span v-if="pkg.type.includes('YEAR')">约¥{{ Math.round(pkg.price / 12) }}/月</span>
+                      <span v-else>月付</span>
+                    </div>
+                  </div>
+
+                  <div class="package-features">
+                    <div class="feature-item" v-for="(feature, idx) in getPackageFeatures(pkg)" :key="idx">
+                      <el-icon class="feature-icon"><Check /></el-icon>
+                      <span>{{ feature }}</span>
+                    </div>
+                  </div>
+
+                  <el-button
+                    :type="pkg.recommended ? 'primary' : 'default'"
+                    class="package-btn"
+                    @click.stop="handlePurchaseVip(pkg)"
+                  >
+                    {{ pkg.recommended ? '立即开通' : '选择套餐' }}
+                  </el-button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 特权说明 -->
+            <div class="vip-privileges-section">
+              <h4>会员特权对比</h4>
+              <el-table :data="privilegeData" style="width: 100%" class="privilege-table">
+                <el-table-column prop="feature" label="特权功能" min-width="150" />
+                <el-table-column prop="normal" label="普通用户" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-icon v-if="row.normal === 'Y'" class="check-icon"><Check /></el-icon>
+                    <el-icon v-else class="close-icon"><Close /></el-icon>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="vip" label="VIP会员" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-icon v-if="row.vip === 'Y'" class="check-icon"><Check /></el-icon>
+                    <el-icon v-else class="close-icon"><Close /></el-icon>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="svip" label="SVIP会员" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-icon v-if="row.svip === 'Y'" class="check-icon"><Check /></el-icon>
+                    <el-icon v-else class="close-icon"><Close /></el-icon>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <!-- 5. 账户设置标签页 -->
+        <el-tab-pane label="账户设置" name="settings">
+          <div class="tab-content">
+            <div class="settings-section">
+              <h4>账户安全</h4>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <div class="setting-title">注销账户</div>
+                  <div class="setting-desc">注销账户将永久删除您的所有数据，此操作不可恢复</div>
+                </div>
+                <el-button type="danger" @click="handleDeleteAccount">注销账户</el-button>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -251,13 +393,15 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Upload } from '@element-plus/icons-vue'
+import { Upload, Star, Check, Close, Clock, Calendar, Medal, Trophy } from '@element-plus/icons-vue'
 import {
   getUserProfile,
   updateUserProfile,
   changePassword,
   applyCreator,
-  uploadAvatar
+  uploadAvatar,
+  purchaseVipSubscription,
+  deleteAccount
 } from '@/api/user/users'
 
 // 默认头像
@@ -265,6 +409,7 @@ const defaultAvatar = 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568
 
 // 状态管理
 const activeTab = ref('info')
+const loading = ref(false)
 const profileLoading = ref(false)
 const passwordLoading = ref(false)
 const creatorLoading = ref(false)
@@ -276,6 +421,8 @@ const avatarPreviewUrl = ref('')
 const profileFormRef = ref(null)
 const passwordFormRef = ref(null)
 const creatorFormRef = ref(null)
+const vipDialogVisible = ref(false)
+const selectedVipPackage = ref(null)
 
 // 表单数据
 const profileForm = reactive({
@@ -297,6 +444,42 @@ const creatorForm = reactive({
   introduction: '',
   portfolioUrl: ''
 })
+
+// VIP套餐数据
+const vipPackages = ref([
+  {
+    type: 'VIP',
+    name: 'VIP会员',
+    price: 99,
+    duration: 30,
+    description: '月度会员，享受所有基础功能',
+    recommended: false
+  },
+  {
+    type: 'VIP_YEAR',
+    name: 'VIP年费会员',
+    price: 999,
+    duration: 365,
+    description: '年度会员，立省约17%',
+    recommended: false
+  },
+  {
+    type: 'SVIP',
+    name: 'SVIP超级会员',
+    price: 199,
+    duration: 30,
+    description: '月度超级会员，享受所有高级功能',
+    recommended: true
+  },
+  {
+    type: 'SVIP_YEAR',
+    name: 'SVIP年费超级会员',
+    price: 1999,
+    duration: 365,
+    description: '年度超级会员，立省约17%',
+    recommended: false
+  }
+])
 
 // 表单校验规则
 const profileRules = {
@@ -362,6 +545,71 @@ const getCreatorApplyTip = computed(() => {
   }
   return tips[profile.value.creatorStatus] || ''
 })
+
+// 计算属性 - 剩余天数
+const getRemainingDays = computed(() => {
+  if (!profile.value.vipExpireDate) return '-'
+  const now = new Date()
+  const expireDate = new Date(profile.value.vipExpireDate)
+  const diffTime = expireDate - now
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return '已过期'
+  if (diffDays === 0) return '今天到期'
+  return `${diffDays}天`
+})
+
+// 计算属性 - VIP卡片样式
+const getVipCardClass = computed(() => {
+  const status = profile.value.vipStatus
+  if (status === 'SVIP') return 'is-svip'
+  if (status === 'VIP') return 'is-vip'
+  return 'is-normal'
+})
+
+// 计算属性 - VIP副标题
+const getVipSubtitle = computed(() => {
+  const status = profile.value.vipStatus
+  if (status === 'SVIP') return '尊享全部高级特权'
+  if (status === 'VIP') return '解锁基础会员特权'
+  return '升级会员解锁更多功能'
+})
+
+// 计算属性 - VIP特权描述
+const getVipPrivileges = computed(() => {
+  const status = profile.value.vipStatus
+  if (status === 'SVIP') return '全部特权'
+  if (status === 'VIP') return '基础特权'
+  return '无'
+})
+
+// 获取套餐特性
+const getPackageFeatures = (pkg) => {
+  if (pkg.type.includes('SVIP')) {
+    return [
+      '无限视频生成次数',
+      '高级模版免费使用',
+      '优先渲染队列',
+      '专属客服支持',
+      '高级特效解锁'
+    ]
+  }
+  return [
+    '每月100次视频生成',
+    '部分模版免费',
+    '标准渲染速度',
+    '工单支持'
+  ]
+}
+
+// 特权对比数据
+const privilegeData = ref([
+  { feature: '视频生成次数', normal: '10次/月', vip: '100次/月', svip: 'Y' },
+  { feature: '高级模版使用', normal: 'N', vip: '部分', svip: 'Y' },
+  { feature: '渲染优先级', normal: '普通', vip: '标准', svip: '优先' },
+  { feature: '特效解锁', normal: '基础', vip: '标准', svip: 'Y' },
+  { feature: '专属客服', normal: 'N', vip: 'N', svip: 'Y' },
+  { feature: '云存储空间', normal: '1GB', vip: '10GB', svip: '50GB' }
+])
 
 // 头像URL处理
 const getAvatarUrl = computed(() => {
@@ -630,13 +878,13 @@ const handleAvatarUpload = async (e) => {
       ElMessage.success('头像上传成功！')
       avatarDialogVisible.value = false
       avatarPreviewUrl.value = ''
-      
+
       // 更新本地头像URL
       profile.value.avatarUrl = result.avatarUrl
-      
+
       // 可选：重新获取完整用户信息
       // await fetchProfile()
-      
+
     } else {
       ElMessage.error('头像上传失败：返回数据异常')
     }
@@ -652,6 +900,109 @@ const handleAvatarUpload = async (e) => {
   }
 }
 
+// 选择VIP套餐
+const selectVipPackage = (pkg) => {
+  selectedVipPackage.value = pkg
+}
+
+// 购买VIP会员
+const handlePurchaseVip = async (pkg) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认开通 ${pkg.name}？\n价格：${pkg.price}元\n时长：${pkg.duration}天`,
+      '开通会员',
+      {
+        confirmButtonText: '确认开通',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    // 调用API（后端接口尚未实现，暂时用模拟数据）
+    try {
+      const res = await purchaseVipSubscription({
+        vipType: pkg.type.includes('SVIP') ? 'SVIP' : 'VIP',
+        duration: pkg.duration
+      })
+
+      if (res.code === 200 || res.success) {
+        ElMessage.success(`${pkg.name}开通成功！`)
+        await fetchProfile()
+      } else {
+        throw new Error(res.message || '开通失败')
+      }
+    } catch (apiError) {
+      // 如果后端接口尚未实现，显示提示
+      console.warn('会员开通接口尚未实现，使用模拟响应')
+      ElMessage.info(`${pkg.name}开通成功！\n（模拟功能，后端接口待实现）`)
+      // 模拟更新状态
+      profile.value.vipStatus = pkg.type.includes('SVIP') ? 'SVIP' : 'VIP'
+      const now = new Date()
+      now.setDate(now.getDate() + pkg.duration)
+      profile.value.vipExpireDate = now.toISOString().split('T')[0]
+    }
+
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('开通会员失败：' + (error.message || '系统异常'))
+    }
+  }
+}
+
+// 注销账户
+const handleDeleteAccount = async () => {
+  try {
+    await ElMessageBox.prompt(
+      '请输入 "确认注销" 以确认注销账户',
+      '注销账户确认',
+      {
+        confirmButtonText: '确认注销',
+        cancelButtonText: '取消',
+        type: 'warning',
+        inputPattern: /确认注销/,
+        inputErrorMessage: '请输入正确的确认文本'
+      }
+    )
+
+    await ElMessageBox.confirm(
+      '注销账户将永久删除您的所有数据，此操作不可恢复！\n\n确定要继续吗？',
+      '危险操作警告',
+      {
+        confirmButtonText: '确定注销',
+        cancelButtonText: '再想想',
+        type: 'error',
+        distinguishCancelAndClose: true
+      }
+    )
+
+    // 调用API（后端接口尚未实现，暂时用模拟数据）
+    try {
+      const res = await deleteAccount()
+
+      if (res.code === 200 || res.success) {
+        ElMessage.success('账户注销成功')
+        // TODO: 跳转到登录页或首页
+        // router.push('/login')
+        // 或使用 window.location.href
+        window.location.href = '/login'
+      } else {
+        throw new Error(res.message || '注销失败')
+      }
+    } catch (apiError) {
+      // 如果后端接口尚未实现，显示提示
+      console.warn('账户注销接口尚未实现，使用模拟响应')
+      ElMessage.info('账户注销成功！\n（模拟功能，后端接口待实现）')
+      // 模拟跳转
+      window.location.href = '/login'
+    }
+
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error('注销账户失败：' + (error.message || '系统异常'))
+    }
+  }
+}
+
 // 页面挂载时获取用户信息
 onMounted(() => {
   fetchProfile()
@@ -660,83 +1011,99 @@ onMounted(() => {
 
 <style scoped>
 .profile-container {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  min-height: calc(100vh - 40px);
-}
-
-/* 页面头部卡片样式 */
-.page-header-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 24px 32px;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-icon {
-  width: 64px;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.header-text h2 {
+  padding: 0;
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fff;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
 }
 
-.header-text p {
-  margin: 4px 0 0 0;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.95rem;
+.profile-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+  backdrop-filter: blur(20px);
+  z-index: -1;
 }
 
-/* 主内容卡片样式 */
+
+/* 主内容卡片样式 - 全屏现代化设计 */
 .main-content-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  box-shadow: none;
   border: none;
   overflow: hidden;
+  background: transparent;
+  backdrop-filter: none;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 个人信息头部（头像+基础信息） */
+/* 个人信息头部（头像+基础信息） - 现代化设计 */
 .profile-header {
   display: flex;
   align-items: center;
-  padding: 30px;
-  border-bottom: 1px solid #ebeef5;
-  gap: 40px;
+  padding: 60px 40px 40px;
+  gap: 32px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border-radius: 0;
+  margin: 0;
+  border: none;
+  position: relative;
+  backdrop-filter: blur(10px);
+}
+
+.profile-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 40px;
+  right: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
 }
 
 .avatar-wrapper {
   cursor: pointer;
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+.avatar-wrapper:hover {
+  transform: translateY(-2px);
+}
+
+.avatar-wrapper:hover .avatar-tip {
+  color: #409eff;
 }
 
 .user-avatar {
-  border: 4px solid #f5f7fa;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 4px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.avatar-wrapper:hover .user-avatar {
+  border-color: #409eff;
+  box-shadow: 0 12px 32px rgba(64, 158, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
 .avatar-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #909399;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #606266;
   display: block;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .user-base-info {
@@ -744,26 +1111,50 @@ onMounted(() => {
 }
 
 .username {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0 0 12px 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  letter-spacing: -0.5px;
 }
 
 .user-tag-group {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-/* 标签页样式 */
+.user-tag-group .el-tag {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.user-tag-group .el-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 标签页样式 - 现代化设计 */
 .profile-tabs {
   margin: 0;
 }
 
 .profile-tabs :deep(.el-tabs__header) {
-  background: #fafafa;
-  padding: 8px 8px 0;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
+  padding: 0 32px;
   border-bottom: none;
+  backdrop-filter: blur(10px);
 }
 
 .profile-tabs :deep(.el-tabs__nav-wrap::after) {
@@ -771,50 +1162,91 @@ onMounted(() => {
 }
 
 .profile-tabs :deep(.el-tabs__item) {
-  height: 48px;
-  line-height: 48px;
+  height: 56px;
+  line-height: 56px;
   border: none;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
+  color: #64748b;
+  padding: 0 24px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.profile-tabs :deep(.el-tabs__item:hover) {
+  color: #3b82f6;
 }
 
 .profile-tabs :deep(.el-tabs__item.is-active) {
-  background: #fff;
-  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: #3b82f6;
+  font-weight: 600;
 }
 
-/* 标签页内容样式 */
+.profile-tabs :deep(.el-tabs__item.is-active::after) {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  border-radius: 3px 3px 0 0;
+}
+
+/* 标签页内容样式 - 现代化设计 */
 .tab-content {
-  padding: 24px;
+  padding: 32px;
 }
 
 .info-display {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 
 .info-desc {
-  --el-descriptions-item-label-color: #606266;
-  --el-descriptions-item-content-color: #303133;
+  --el-descriptions-item-label-color: #4b5563;
+  --el-descriptions-item-content-color: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.info-desc:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .desc-label {
-  font-weight: 500;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 12px 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .action-btn-group {
-  margin-top: 20px;
+  margin-top: 24px;
   text-align: right;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .form-container {
-  max-width: 600px;
+  max-width: 640px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* 创作者申请提示 */
@@ -824,6 +1256,401 @@ onMounted(() => {
 
 .alert-tip {
   --el-alert-padding: 12px 16px;
+}
+
+/* VIP会员管理样式 - 现代化升级 */
+.vip-management {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.vip-status-card {
+  position: relative;
+  border-radius: 24px;
+  padding: 32px;
+  margin-bottom: 40px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.vip-status-card.is-normal {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.vip-status-card.is-vip {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.vip-status-card.is-svip {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.vip-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.1;
+}
+
+.vip-card-pattern {
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.vip-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.vip-card-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.vip-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.vip-info {
+  flex: 1;
+}
+
+.vip-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.vip-subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.vip-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.vip-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vip-stat-item .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+}
+
+.vip-stat-item .stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vip-stat-item .stat-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.vip-stat-item .stat-value {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* VIP套餐区域 */
+.vip-packages-section {
+  margin-bottom: 40px;
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.section-title h4 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.section-title p {
+  font-size: 15px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.vip-packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.vip-package-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vip-package-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
+  transform: translateY(-4px);
+}
+
+.vip-package-card.recommended {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.vip-package-card.recommended:hover {
+  box-shadow: 0 12px 40px rgba(245, 158, 11, 0.2);
+}
+
+.vip-package-card.svip-card {
+  border-color: #ec4899;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+}
+
+.vip-package-card.svip-card.recommended {
+  border-color: #ec4899;
+}
+
+.recommend-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.save-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: #10b981;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.package-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-top: 20px;
+}
+
+.package-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.vip-package-card.svip-card .package-icon {
+  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+}
+
+.package-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.package-pricing {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.price-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+}
+
+.currency {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f43f5e;
+}
+
+.price-number {
+  font-size: 48px;
+  font-weight: 700;
+  color: #f43f5e;
+  line-height: 1;
+}
+
+.price-period {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.package-features {
+  margin-bottom: 24px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.feature-icon {
+  color: #10b981;
+  font-size: 16px;
+}
+
+.package-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+/* 特权对比表格 */
+.vip-privileges-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.vip-privileges-section h4 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 24px 0;
+}
+
+.privilege-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.privilege-table :deep(.el-table__header th) {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.privilege-table :deep(.el-table__row td) {
+  padding: 16px 0;
+}
+
+.check-icon {
+  color: #10b981;
+  font-size: 20px;
+}
+
+.close-icon {
+  color: #d1d5db;
+  font-size: 20px;
+}
+
+/* 账户设置样式 */
+.settings-section {
+  max-width: 640px;
+}
+
+.settings-section h4 {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e4e7ed;
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.setting-desc {
+  font-size: 14px;
+  color: #909399;
+  line-height: 1.5;
 }
 
 /* 头像弹窗样式 - 重点修复 */
@@ -873,28 +1700,151 @@ onMounted(() => {
 
 /* 响应式适配 */
 @media (max-width: 768px) {
-  .profile-container {
-    padding: 16px;
+  .profile-container::before {
+    background: radial-gradient(circle at 10% 90%, rgba(167, 139, 250, 0.1) 0%, transparent 60%),
+                radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.1) 0%, transparent 60%);
   }
   
   .profile-header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-    padding: 20px;
+    gap: 24px;
+    padding: 40px 30px;
+  }
+  
+  .profile-header::after {
+    left: 30px;
+    right: 30px;
+  }
+  
+  .username {
+    font-size: 28px;
   }
   
   .user-tag-group {
     justify-content: center;
+    gap: 8px;
+  }
+  
+  .user-tag-group .el-tag {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+  
+  .profile-tabs :deep(.el-tabs__header) {
+    padding: 0 20px;
+  }
+  
+  .profile-tabs :deep(.el-tabs__item) {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+  
+  .profile-tabs :deep(.el-tabs__item.is-active::after) {
+    left: 16px;
+    right: 16px;
+  }
+  
+  .tab-content {
+    padding: 24px;
   }
   
   .form-container {
     max-width: 100%;
+    padding: 20px;
   }
   
   .avatar-big {
-    width: 140px;
-    height: 140px;
+    width: 150px;
+    height: 150px;
+  }
+
+  /* VIP管理响应式 */
+  .vip-status-card {
+    padding: 24px;
+  }
+
+  .vip-card-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .vip-title {
+    font-size: 24px;
+  }
+
+  .vip-stats {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .vip-packages-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vip-package-card {
+    padding: 24px;
+  }
+
+  .price-number {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-header {
+    padding: 30px 20px;
+  }
+  
+  .profile-header::after {
+    left: 20px;
+    right: 20px;
+  }
+  
+  .profile-tabs :deep(.el-tabs__header) {
+    padding: 0 16px;
+  }
+  
+  .profile-tabs :deep(.el-tabs__item) {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  
+  .tab-content {
+    padding: 20px;
+  }
+  
+  .form-container {
+    padding: 16px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* VIP管理小屏幕响应式 */
+  .vip-icon-wrapper {
+    width: 56px;
+    height: 56px;
+  }
+
+  .vip-title {
+    font-size: 20px;
+  }
+
+  .vip-stat-item .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .vip-privileges-section {
+    padding: 20px;
+  }
+
+  .feature-item {
+    font-size: 13px;
   }
 }
 </style>

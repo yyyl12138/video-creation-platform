@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { clearAuthStorage, getRoles, getToken, isAdminRoles, buildLoginRedirectQuery } from '@/utils/auth'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,14 +55,19 @@ const router = createRouter({
             component: () => import('../layout/Layout.vue'),
             children: [
                 { path: 'profile', component: () => import('../views/user/Profile.vue') },
-                { path: 'wallet', component: () => import('../views/user/Wallet.vue') }
+                { path: 'wallet', component: () => import('../views/user/Wallet.vue') },
+                { path: 'notification', component: () => import('../views/user/Notification.vue') },
+                { path: 'analytics', component: () => import('../views/user/CreatorAnalytics.vue') },
+                { path: 'payment', component: () => import('../views/user/Payment.vue') }
             ]
         },
-        // Material Module
+        // Material Module - 统一的资源管理中心
         {
             path: '/material',
             component: () => import('../layout/Layout.vue'),
             children: [
+                { path: '', redirect: '/material/manager' },
+                { path: 'manager', component: () => import('../views/material/MaterialManager.vue') },
                 { path: 'list', component: () => import('../views/material/MaterialList.vue') },
                 { path: 'template', component: () => import('../views/material/TemplateList.vue') }
             ]
@@ -74,64 +77,34 @@ const router = createRouter({
             path: '/creation',
             component: () => import('../layout/Layout.vue'),
             children: [
-                { path: 'generation', component: () => import('../views/creation/Generation.vue') },
-                { path: 'task', component: () => import('../views/creation/TaskList.vue') },
-                { path: 'project', component: () => import('../views/creation/ProjectEdit.vue') }
+            { path: 'generation', component: () => import('../views/creation/Generation.vue') },
+            { path: 'chat', name: 'ChatCreation', component: () => import('../views/creation/ChatCreation.vue') },
+            { path: 'result', name: 'ResultDisplay', component: () => import('../views/creation/ResultDisplay.vue') },
+            { path: 'task', component: () => import('../views/creation/TaskList.vue') },
+            { path: 'project', component: () => import('../views/creation/ProjectEdit.vue') }
             ]
         },
-        // Community Module
+        // Market Module (模版市场)
         {
-            path: '/community',
+            path: '/market',
             component: () => import('../layout/Layout.vue'),
             children: [
-                { path: 'feed', component: () => import('../views/community/Feed.vue') }
+                { path: '', redirect: '/market/templates' },
+                { path: 'templates', component: () => import('../views/market/TemplateList.vue') },
+                { path: 'template/:id', component: () => import('../views/market/TemplateDetail.vue') },
+                { path: 'following', component: () => import('../views/market/FollowingCreators.vue') }
             ]
         },
-        // Admin Module（独立管理员端布局）
+        // Admin Module
         {
             path: '/admin',
-            component: () => import('../layout/AdminLayout.vue'),
-            redirect: '/admin/users',
+            component: () => import('../layout/Layout.vue'),
             children: [
-                { path: 'users', component: () => import('../views/admin/UserManagement.vue') },
-                { path: 'materials', component: () => import('../views/admin/MaterialManagement.vue') },
                 { path: 'review', component: () => import('../views/admin/ContentReview.vue') },
-                { path: 'rules', component: () => import('../views/admin/ReviewRules.vue') },
-                { path: 'models', component: () => import('../views/admin/ModelTtsManagement.vue') },
-                { path: 'stats', component: () => import('../views/admin/AdminStats.vue') },
-                { path: 'bigdata', component: () => import('../views/admin/BigdataDashboard.vue') },
-                { path: 'realtime', component: () => import('../views/admin/RealtimeDashboard.vue') },
-                { path: 'finance', component: () => import('../views/admin/FinanceReport.vue') },
                 { path: 'config', component: () => import('../views/admin/SystemConfig.vue') }
             ]
         }
     ]
-})
-
-// 管理员路由守卫：只有管理员角色才能访问 /admin
-router.beforeEach((to) => {
-  const isAdminRoute = to.path.startsWith('/admin')
-  if (!isAdminRoute) return true
-
-  const token = getToken()
-  if (!token) {
-    return {
-      path: '/login',
-      query: buildLoginRedirectQuery(to.fullPath, 'admin')
-    }
-  }
-
-  const roles = getRoles()
-  if (!isAdminRoles(roles)) {
-    ElMessage.error('非管理员账号，无法进入管理后台')
-    clearAuthStorage()
-    return {
-      path: '/login',
-      query: buildLoginRedirectQuery(to.fullPath, 'admin')
-    }
-  }
-
-  return true
 })
 
 export default router

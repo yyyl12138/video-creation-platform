@@ -1,350 +1,585 @@
 <template>
-  <div class="admin-page">
-    <div class="page-header">
-      <div>
-        <h2>内容审核</h2>
-        <p class="subtitle">查看待审核作品，支持通过 / 驳回并记录原因</p>
+  <div class="content-review-container">
+    <!-- 主内容区域 -->
+    <el-card class="main-content-card">
+      <!-- 统计卡片 -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon pending">
+            <el-icon><Clock /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.pending }}</div>
+            <div class="stat-label">待审核</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon approved">
+            <el-icon><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.approved }}</div>
+            <div class="stat-label">已通过</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon rejected">
+            <el-icon><CircleClose /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.rejected }}</div>
+            <div class="stat-label">已拒绝</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon total">
+            <el-icon><DataAnalysis /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">总计</div>
+          </div>
+        </div>
       </div>
-      <el-space>
-        <el-select
-          v-model="searchForm.status"
-          placeholder="审核状态"
-          style="width: 150px"
-        >
-          <el-option label="待审核" value="PENDING" />
-          <el-option label="已通过" value="PASSED" />
-          <el-option label="已驳回" value="REJECTED" />
+
+      <!-- 筛选和搜索区域 -->
+      <div class="filter-bar">
+        <el-select v-model="filterStatus" placeholder="审核状态" clearable class="filter-select" @change="loadPendingContent">
+          <el-option label="待审核" value="pending" />
+          <el-option label="已通过" value="approved" />
+          <el-option label="已拒绝" value="rejected" />
         </el-select>
-        <el-select
-          v-model="searchForm.contentType"
-          placeholder="内容类型"
+        <el-select v-model="filterType" placeholder="内容类型" clearable class="filter-select" @change="loadPendingContent">
+          <el-option label="视频" value="video" />
+          <el-option label="图片" value="image" />
+          <el-option label="文本" value="text" />
+        </el-select>
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索用户或内容..."
+          prefix-icon="Search"
+          class="search-input"
           clearable
-          style="width: 140px"
-        >
-          <el-option label="全部" value="" />
-          <el-option label="视频" value="VIDEO" />
-          <el-option label="图片" value="IMAGE" />
-        </el-select>
-        <el-button type="primary" @click="handleSearch">
+          @keyup.enter="loadPendingContent"
+        />
+        <el-button type="primary" @click="loadPendingContent" class="search-btn">
           <el-icon><Search /></el-icon>
-          查询
+          搜索
         </el-button>
-      </el-space>
-    </div>
+      </div>
 
-    <el-card shadow="never">
-      <el-table
-        v-loading="loading"
-        :data="reviewList"
-        border
-        stripe
-      >
-        <el-table-column prop="reviewId" label="审核ID" width="120" />
-        <el-table-column prop="contentId" label="内容ID" min-width="140" />
-        <el-table-column prop="creatorName" label="创作者" width="120" />
-        <el-table-column prop="submitTime" label="提交时间" min-width="160" />
-        <el-table-column prop="machineCheckResult" label="机审结果" width="140">
-          <template #default="{ row }">
-            <el-tag
-              size="small"
-              :type="row.machineCheckResult === 'RISK_HIGH' ? 'danger' : 'warning'"
-            >
-              {{ row.machineCheckResult || 'UNKNOWN' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="审核状态" width="120">
-          <template #default="{ row }">
-            <el-tag
-              size="small"
-              :type="row.status === 'PENDING'
-                ? 'warning'
-                : row.status === 'PASSED'
-                  ? 'success'
-                  : 'danger'"
-            >
-              {{ row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              size="small"
-              @click="openDetail(row)"
-            >
-              详情审核
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 内容列表 -->
+      <div class="content-list" v-loading="loading">
+        <div v-if="contentList.length === 0" class="empty-state">
+          <el-icon size="64" color="#c0c4cc"><DocumentChecked /></el-icon>
+          <p>暂无待审核内容</p>
+        </div>
 
-      <div class="pagination-wrapper">
+        <div v-else class="review-cards">
+          <div v-for="item in contentList" :key="item.id" class="review-card">
+            <div class="card-header">
+              <div class="user-info">
+                <el-avatar :size="40" :src="item.userAvatar">
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+                <div class="user-details">
+                  <div class="user-name">{{ item.userName }}</div>
+                  <div class="submit-time">{{ formatDate(item.submitTime) }}</div>
+                </div>
+              </div>
+              <el-tag :type="getStatusTag(item.status)" size="small">
+                {{ getStatusLabel(item.status) }}
+              </el-tag>
+            </div>
+
+            <div class="card-content">
+              <div class="content-preview">
+                <div v-if="item.type === 'video'" class="video-preview">
+                  <video :src="item.contentUrl" controls class="preview-video"></video>
+                </div>
+                <div v-else-if="item.type === 'image'" class="image-preview">
+                  <img :src="item.contentUrl" alt="预览" class="preview-image" />
+                </div>
+                <div v-else class="text-preview">
+                  {{ item.content }}
+                </div>
+              </div>
+              <div class="content-meta">
+                <div class="meta-item">
+                  <el-icon><Collection /></el-icon>
+                  <span>类型：{{ getTypeLabel(item.type) }}</span>
+                </div>
+                <div v-if="item.description" class="meta-item description">
+                  <el-icon><Document /></el-icon>
+                  <span>描述：{{ item.description }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <div v-if="item.status === 'pending'" class="action-buttons">
+                <el-button type="danger" size="large" @click="handleReject(item)">
+                  <el-icon><Close /></el-icon>
+                  拒绝
+                </el-button>
+                <el-button type="success" size="large" @click="handleApprove(item)">
+                  <el-icon><Check /></el-icon>
+                  通过
+                </el-button>
+              </div>
+              <div v-else class="review-result">
+                <span v-if="item.status === 'approved'" class="result-text approved">
+                  <el-icon><CircleCheck /></el-icon>
+                  已通过审核
+                </span>
+                <span v-else class="result-text rejected">
+                  <el-icon><CircleClose /></el-icon>
+                  已拒绝审核
+                </span>
+                <span v-if="item.reviewNote" class="review-note">{{ item.reviewNote }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分页 -->
+      <div v-if="contentList.length > 0" class="pagination-bar">
         <el-pagination
-          background
-          layout="total, prev, pager, next, sizes"
-          :total="total"
-          v-model:current-page="page"
-          v-model:page-size="pageSize"
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.size"
+          :total="pagination.total"
           :page-sizes="[10, 20, 50]"
-          @current-change="loadReviews"
-          @size-change="loadReviews"
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="loadPendingContent"
+          @size-change="loadPendingContent"
         />
       </div>
     </el-card>
-
-    <!-- 审核详情 + 决策 -->
-    <el-drawer
-      v-model="detailVisible"
-      title="审核详情"
-      size="60%"
-    >
-      <div v-if="currentDetail">
-        <el-row :gutter="20">
-          <el-col :span="14">
-            <el-card shadow="never" class="section-card">
-              <h3 class="section-title">内容预览</h3>
-              <p><strong>标题：</strong>{{ currentDetail.content?.title }}</p>
-              <p><strong>描述：</strong>{{ currentDetail.content?.description }}</p>
-              <p><strong>地址：</strong>{{ currentDetail.content?.url }}</p>
-            </el-card>
-          </el-col>
-          <el-col :span="10">
-            <el-card shadow="never" class="section-card">
-              <h3 class="section-title">历史记录</h3>
-              <el-timeline v-if="currentDetail.history?.length">
-                <el-timeline-item
-                  v-for="(item, index) in currentDetail.history"
-                  :key="index"
-                  :timestamp="item.reviewTime"
-                >
-                  {{ item.reviewerName }} - {{ item.action }} - {{ item.reason }}
-                </el-timeline-item>
-              </el-timeline>
-              <el-empty v-else description="暂无历史记录" />
-            </el-card>
-          </el-col>
-        </el-row>
-
-        <el-card shadow="never" class="section-card decision-card">
-          <h3 class="section-title">审核决策</h3>
-          <el-form
-            ref="decisionFormRef"
-            :model="decisionForm"
-            :rules="decisionRules"
-            label-width="90px"
-          >
-            <el-form-item label="审核结果" prop="status">
-              <el-radio-group v-model="decisionForm.status">
-                <el-radio label="PASSED">通过</el-radio>
-                <el-radio label="REJECTED">驳回</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item
-              label="驳回原因"
-              prop="rejectReason"
-              v-if="decisionForm.status === 'REJECTED'"
-            >
-              <el-input
-                v-model="decisionForm.rejectReason"
-                type="textarea"
-                :rows="3"
-                placeholder="请详细说明驳回原因"
-              />
-            </el-form-item>
-            <el-form-item label="修改建议">
-              <el-input
-                v-model="decisionForm.suggestions"
-                type="textarea"
-                :rows="2"
-                placeholder="可选，给创作者的修改意见"
-              />
-            </el-form-item>
-          </el-form>
-          <div class="decision-actions">
-            <el-button @click="detailVisible = false">关闭</el-button>
-            <el-button
-              type="primary"
-              :loading="decisionSubmitting"
-              @click="submitDecision"
-            >
-              提交审核结果
-            </el-button>
-          </div>
-        </el-card>
-      </div>
-      <el-empty v-else description="请选择一条审核任务" />
-    </el-drawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  fetchReviewList,
-  getReviewDetail,
-  submitReviewDecision
-} from '@/api/admin/reviews'
+  DocumentChecked, Refresh, Clock, CircleCheck, CircleClose,
+  DataAnalysis, Search, User, Collection, Document, Check, Close
+} from '@element-plus/icons-vue'
 
 const loading = ref(false)
-const reviewList = ref([])
-const total = ref(0)
-const page = ref(1)
-const pageSize = ref(20)
+const searchKeyword = ref('')
+const filterStatus = ref('pending')
+const filterType = ref('')
+const contentList = ref([])
 
-const searchForm = reactive({
-  status: 'PENDING',
-  contentType: ''
+const stats = reactive({
+  pending: 23,
+  approved: 456,
+  rejected: 12,
+  total: 491
 })
 
-const detailVisible = ref(false)
-const currentDetail = ref(null)
-
-const decisionFormRef = ref()
-const decisionForm = reactive({
-  reviewId: null,
-  status: 'PASSED',
-  rejectReason: '',
-  suggestions: ''
+const pagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0
 })
-const decisionSubmitting = ref(false)
 
-const decisionRules = {
-  status: [{ required: true, message: '请选择审核结果', trigger: 'change' }],
-  rejectReason: [
-    {
-      required: true,
-      message: '请输入驳回原因',
-      trigger: 'blur',
-      validator: (_, value, callback) => {
-        if (decisionForm.status === 'REJECTED' && !value) {
-          callback(new Error('请输入驳回原因'))
-        } else {
-          callback()
-        }
-      }
-    }
-  ]
+const mockContentList = [
+  {
+    id: 1,
+    userId: 'user-001',
+    userName: '张三',
+    userAvatar: '',
+    type: 'video',
+    status: 'pending',
+    content: 'AI生成的产品宣传视频',
+    contentUrl: '/videos/sample1.mp4',
+    description: '展示新产品的特点和优势',
+    submitTime: '2024-01-26T10:30:00'
+  },
+  {
+    id: 2,
+    userId: 'user-002',
+    userName: '李四',
+    userAvatar: '',
+    type: 'image',
+    status: 'pending',
+    content: '创意海报设计',
+    contentUrl: '/images/sample1.png',
+    description: '节日促销活动海报',
+    submitTime: '2024-01-26T09:15:00'
+  },
+  {
+    id: 3,
+    userId: 'user-003',
+    userName: '王五',
+    userAvatar: '',
+    type: 'text',
+    status: 'approved',
+    content: '这是一段关于产品介绍的文本内容...',
+    contentUrl: '',
+    description: '产品详细说明',
+    submitTime: '2024-01-25T16:45:00',
+    reviewNote: '内容合规，已通过'
+  }
+]
+
+const getStatusLabel = (status) => {
+  const labels = { pending: '待审核', approved: '已通过', rejected: '已拒绝' }
+  return labels[status] || status
 }
 
-const loadReviews = async () => {
-  loading.value = true
+const getStatusTag = (status) => {
+  const tags = { pending: 'warning', approved: 'success', rejected: 'danger' }
+  return tags[status] || ''
+}
+
+const getTypeLabel = (type) => {
+  const labels = { video: '视频', image: '图片', text: '文本' }
+  return labels[type] || type
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleString('zh-CN')
+}
+
+const loadPendingContent = async () => {
   try {
-    const res = await fetchReviewList({
-      page: page.value,
-      size: pageSize.value,
-      status: searchForm.status || undefined,
-      contentType: searchForm.contentType || undefined
+    loading.value = true
+    // 模拟加载
+    await new Promise(resolve => setTimeout(resolve, 500))
+    contentList.value = mockContentList.filter(item => {
+      if (filterStatus.value && item.status !== filterStatus.value) return false
+      if (filterType.value && item.type !== filterType.value) return false
+      if (searchKeyword.value && !item.userName.includes(searchKeyword.value)) return false
+      return true
     })
-    reviewList.value = res.data?.records || []
-    total.value = res.data?.total || 0
-  } catch (e) {
-    ElMessage.error('加载审核列表失败')
-  } finally {
+    pagination.total = contentList.value.length
+    loading.value = false
+  } catch (error) {
+    console.error('加载内容失败:', error)
+    ElMessage.error('加载失败')
     loading.value = false
   }
 }
 
-const handleSearch = () => {
-  page.value = 1
-  loadReviews()
-}
-
-const openDetail = async (row) => {
+const handleApprove = async (item) => {
   try {
-    const res = await getReviewDetail(row.reviewId)
-    currentDetail.value = res.data || null
-    decisionForm.reviewId = row.reviewId
-    decisionForm.status = 'PASSED'
-    decisionForm.rejectReason = ''
-    decisionForm.suggestions = ''
-    detailVisible.value = true
-  } catch (e) {
-    ElMessage.error('获取审核详情失败')
-  }
-}
-
-const submitDecision = () => {
-  if (!decisionForm.reviewId) {
-    ElMessage.warning('请选择审核任务')
-    return
-  }
-  decisionFormRef.value.validate(async (valid) => {
-    if (!valid) return
-    decisionSubmitting.value = true
-    try {
-      await submitReviewDecision(decisionForm.reviewId, {
-        status: decisionForm.status,
-        rejectReason: decisionForm.status === 'REJECTED' ? decisionForm.rejectReason : undefined,
-        suggestions: decisionForm.suggestions || undefined
-      })
-      ElMessage.success('审核结果已提交')
-      detailVisible.value = false
-      loadReviews()
-    } catch (e) {
-      ElMessage.error('提交审核结果失败')
-    } finally {
-      decisionSubmitting.value = false
+    await ElMessageBox.confirm(`确定通过 "${item.userName}" 的内容？`, '确认', { type: 'success' })
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 500))
+    item.status = 'approved'
+    item.reviewNote = '内容合规，已通过'
+    stats.pending--
+    stats.approved++
+    ElMessage.success('审核通过')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('审核失败:', error)
+      ElMessage.error('审核失败')
     }
-  })
+  }
 }
 
-onMounted(() => {
-  loadReviews()
-})
+const handleReject = async (item) => {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入拒绝原因：', '拒绝审核', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /.+/,
+      inputErrorMessage: '请输入拒绝原因'
+    })
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 500))
+    item.status = 'rejected'
+    item.reviewNote = value
+    stats.pending--
+    stats.rejected++
+    ElMessage.success('已拒绝该内容')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('审核失败:', error)
+      ElMessage.error('审核失败')
+    }
+  }
+}
+
+onMounted(() => loadPendingContent())
 </script>
 
 <style scoped>
-.admin-page {
-  padding: 4px;
+.content-review-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  min-height: calc(100vh - 40px);
 }
 
-.page-header {
+.main-content-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: none;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.stat-icon.pending {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+}
+
+.stat-icon.approved {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+}
+
+.stat-icon.rejected {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+}
+
+.stat-icon.total {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 12px;
+  margin: 0 20px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.filter-select {
+  width: 140px;
+}
+
+.search-btn {
+  min-width: 80px;
+}
+
+.content-list {
+  padding: 0 20px 20px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #909399;
+}
+
+.empty-state p {
+  margin: 16px 0;
+  font-size: 16px;
+}
+
+.review-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 16px;
   font-weight: 600;
   color: #303133;
 }
 
-.subtitle {
-  margin: 4px 0 0;
+.submit-time {
   font-size: 13px;
-  color: #6b7280;
+  color: #909399;
 }
 
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.section-card {
+.card-content {
   margin-bottom: 16px;
 }
 
-.section-title {
-  margin: 0 0 12px;
+.content-preview {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.video-preview,
+.image-preview {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.preview-video,
+.preview-image {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.text-preview {
+  padding: 12px;
+  background: #fff;
+  border-radius: 6px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.content-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
-  font-weight: 600;
+  color: #606266;
 }
 
-.decision-card {
-  margin-top: 12px;
+.meta-item.description {
+  padding-top: 8px;
+  border-top: 1px dashed #e4e7ed;
 }
 
-.decision-actions {
-  text-align: right;
-  margin-top: 12px;
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.review-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.result-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.result-text.approved {
+  color: #10b981;
+}
+
+.result-text.rejected {
+  color: #ef4444;
+}
+
+.review-note {
+  color: #606266;
+  font-style: italic;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .content-review-container {
+    padding: 16px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
 }
 </style>

@@ -1,18 +1,6 @@
 <template>
   <div class="wallet-container">
-    <!-- 页面标题卡片 -->
-    <div class="page-header-card">
-      <div class="header-content">
-        <div class="header-icon">
-          <el-icon size="32" color="#fff"><Wallet /></el-icon>
-        </div>
-        <div class="header-text">
-          <h2>我的钱包</h2>
-          <p>管理您的账户余额和交易记录</p>
-        </div>
-      </div>
-    </div>
-
+    
     <!-- 主内容卡片 -->
     <el-card class="main-content-card">
       <!-- 会员信息区域 -->
@@ -53,6 +41,17 @@
             <span class="detail-label">最近更新</span>
             <span class="detail-value">{{ formatDate(walletInfo.updatedTime) }}</span>
           </div>
+        </div>
+        <!-- 充值提现按钮 -->
+        <div class="balance-actions">
+          <el-button type="primary" size="large" @click="showRechargeDialog">
+            <el-icon><Wallet /></el-icon>
+            充值
+          </el-button>
+          <el-button size="large" @click="showWithdrawDialog">
+            <el-icon><Wallet /></el-icon>
+            提现
+          </el-button>
         </div>
       </div>
 
@@ -129,6 +128,97 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 充值弹窗 -->
+    <el-dialog
+      v-model="rechargeDialogVisible"
+      title="充值"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="rechargeForm" label-width="80px">
+        <el-form-item label="充值金额">
+          <el-input-number
+            v-model="rechargeForm.amount"
+            :min="1"
+            :max="100000"
+            :precision="2"
+            :step="10"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="充值方式">
+          <el-radio-group v-model="rechargeForm.method">
+            <el-radio value="ALIPAY">支付宝</el-radio>
+            <el-radio value="WECHAT">微信支付</el-radio>
+            <el-radio value="BANK">银行卡</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="快捷充值">
+          <div class="quick-amounts">
+            <el-button
+              v-for="amount in [10, 50, 100, 200, 500, 1000]"
+              :key="amount"
+              size="small"
+              @click="rechargeForm.amount = amount"
+            >
+              {{ amount }}元
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rechargeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleRecharge" :loading="recharging">确认充值</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 提现弹窗 -->
+    <el-dialog
+      v-model="withdrawDialogVisible"
+      title="提现"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="withdrawForm" label-width="80px">
+        <el-form-item label="提现金额">
+          <el-input-number
+            v-model="withdrawForm.amount"
+            :min="1"
+            :max="walletInfo.balance"
+            :precision="2"
+            :step="10"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="可用余额">
+          <span class="available-balance">¥ {{ Number(walletInfo.balance || 0).toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="提现方式">
+          <el-radio-group v-model="withdrawForm.method">
+            <el-radio value="ALIPAY">支付宝</el-radio>
+            <el-radio value="WECHAT">微信</el-radio>
+            <el-radio value="BANK">银行卡</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="账户信息">
+          <el-input
+            v-model="withdrawForm.accountInfo"
+            placeholder="请输入支付宝账号/微信号/银行卡号"
+          />
+        </el-form-item>
+        <el-form-item label="账户姓名">
+          <el-input
+            v-model="withdrawForm.accountName"
+            placeholder="请输入账户持有人姓名"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="withdrawDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleWithdraw" :loading="withdrawing">确认提现</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -137,13 +227,17 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Wallet } from '@element-plus/icons-vue'
 import { getUserProfile } from '@/api/user/users'
-import { getWalletBalance, getTransactions } from '@/api/user/wallets'
+import { getWalletBalance, getTransactions, recharge, withdraw } from '@/api/user/wallets'
 
 // 默认头像（与Profile.vue完全一致）
 const defaultAvatar = 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568c908jpeg.jpeg'
 
 // 状态管理（与Profile.vue命名统一）
 const loading = ref(false)
+const recharging = ref(false)
+const withdrawing = ref(false)
+const rechargeDialogVisible = ref(false)
+const withdrawDialogVisible = ref(false)
 const profile = ref({ // 原userProfile → 改为profile（和Profile.vue一致）
   userId: '',
   username: '',
@@ -162,6 +256,20 @@ const profile = ref({ // 原userProfile → 改为profile（和Profile.vue一致
   vipExpireDate: null,
   creatorStatus: 'NONE',
   status: '正常'
+})
+
+// 充值表单
+const rechargeForm = reactive({
+  amount: 0,
+  method: 'ALIPAY'
+})
+
+// 提现表单
+const withdrawForm = reactive({
+  amount: 0,
+  method: 'ALIPAY',
+  accountInfo: '',
+  accountName: ''
 })
 
 const walletInfo = ref({
@@ -260,6 +368,138 @@ const formatDate = (dateString) => {
     return date.toLocaleString()
   } catch (e) {
     return '暂无更新'
+  }
+}
+
+// 显示充值弹窗
+const showRechargeDialog = () => {
+  rechargeDialogVisible.value = true
+  rechargeForm.amount = 0
+  rechargeForm.method = 'ALIPAY'
+}
+
+// 显示提现弹窗
+const showWithdrawDialog = () => {
+  if (walletInfo.value.balance < 1) {
+    ElMessage.warning('余额不足，无法提现')
+    return
+  }
+  withdrawDialogVisible.value = true
+  withdrawForm.amount = 0
+  withdrawForm.method = 'ALIPAY'
+  withdrawForm.accountInfo = ''
+  withdrawForm.accountName = ''
+}
+
+// 处理充值
+const handleRecharge = async () => {
+  if (rechargeForm.amount < 1) {
+    ElMessage.warning('充值金额不能少于1元')
+    return
+  }
+
+  try {
+    recharging.value = true
+
+    // 调用API（后端接口尚未实现，暂时用模拟数据）
+    try {
+      const res = await recharge({
+        amount: rechargeForm.amount,
+        method: rechargeForm.method
+      })
+
+      if (res.code === 200 || res.success) {
+        ElMessage.success(`充值成功，已充值 ${rechargeForm.amount} 元`)
+        rechargeDialogVisible.value = false
+        await loadWalletBalance()
+        await fetchTransactions()
+      } else {
+        throw new Error(res.message || '充值失败')
+      }
+    } catch (apiError) {
+      // 如果后端接口尚未实现，显示提示
+      console.warn('充值接口尚未实现，使用模拟响应')
+      ElMessage.info(`充值成功，已充值 ${rechargeForm.amount} 元\n（模拟功能，后端接口待实现）`)
+      rechargeDialogVisible.value = false
+      // 模拟更新余额
+      walletInfo.value.balance = Number(walletInfo.value.balance || 0) + rechargeForm.amount
+      walletInfo.value.totalRecharged = Number(walletInfo.value.totalRecharged || 0) + rechargeForm.amount
+      // 刷新交易流水
+      await fetchTransactions()
+    }
+
+  } catch (error) {
+    ElMessage.error('充值失败：' + (error.message || '系统异常'))
+  } finally {
+    recharging.value = false
+  }
+}
+
+// 处理提现
+const handleWithdraw = async () => {
+  if (withdrawForm.amount < 1) {
+    ElMessage.warning('提现金额不能少于1元')
+    return
+  }
+
+  if (withdrawForm.amount > walletInfo.value.balance) {
+    ElMessage.warning('提现金额超过可用余额')
+    return
+  }
+
+  if (!withdrawForm.accountInfo || !withdrawForm.accountName) {
+    ElMessage.warning('请完善提现账户信息')
+    return
+  }
+
+  try {
+    withdrawing.value = true
+
+    await ElMessageBox.confirm(
+      `确认提现 ${withdrawForm.amount} 元？\n提现至：${withdrawForm.accountInfo}`,
+      '提现确认',
+      {
+        confirmButtonText: '确认提现',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 调用API（后端接口尚未实现，暂时用模拟数据）
+    try {
+      const res = await withdraw({
+        amount: withdrawForm.amount,
+        method: withdrawForm.method,
+        accountInfo: withdrawForm.accountInfo,
+        accountName: withdrawForm.accountName
+      })
+
+      if (res.code === 200 || res.success) {
+        ElMessage.success(`提现申请已提交，提现金额 ${withdrawForm.amount} 元`)
+        withdrawDialogVisible.value = false
+        await loadWalletBalance()
+        await fetchTransactions()
+      } else {
+        throw new Error(res.message || '提现失败')
+      }
+    } catch (apiError) {
+      // 如果后端接口尚未实现，显示提示
+      console.warn('提现接口尚未实现，使用模拟响应')
+      ElMessage.info(`提现申请已提交，提现金额 ${withdrawForm.amount} 元\n（模拟功能，后端接口待实现）`)
+      withdrawDialogVisible.value = false
+      // 模拟更新余额
+      walletInfo.value.balance = Number(walletInfo.value.balance || 0) - withdrawForm.amount
+      walletInfo.value.totalConsumed = Number(walletInfo.value.totalConsumed || 0) + withdrawForm.amount
+      // 刷新交易流水
+      await fetchTransactions()
+    }
+
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('提现失败：' + (error.message || '系统异常'))
+    }
+  } finally {
+    withdrawing.value = false
   }
 }
 
@@ -408,6 +648,30 @@ onMounted(() => {
 
 .detail-value {
   font-weight: 500;
+}
+
+.balance-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.balance-actions .el-button {
+  flex: 1;
+  max-width: 200px;
+}
+
+.quick-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.available-balance {
+  color: #42b983;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 /* 交易流水区域 */

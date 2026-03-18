@@ -1,8 +1,29 @@
 <template>
   <div class="login-container">
+    <!-- 背景渐变效果 -->
+    <div class="login-background">
+      <div class="bg-gradient"></div>
+      <div class="bg-glow bg-glow-1"></div>
+      <div class="bg-glow bg-glow-2"></div>
+    </div>
+    
+    <!-- 视频背景 -->
+    <div class="video-background">
+      <video 
+        ref="bgVideo"
+        class="bg-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        src="/videos/8ad1a29fab8541b387f425c05b0d9801.mp4"
+      ></video>
+      <div class="video-overlay"></div>
+    </div>
+    
     <el-card class="login-card">
       <template #header>
-        <h2>系统登录</h2>
+        <h2 class="login-title">系统登录</h2>
       </template>
       
       <!-- 登录方式切换 -->
@@ -14,6 +35,7 @@
                 v-model="passwordForm.username" 
                 placeholder="用户名/邮箱/手机号" 
                 prefix-icon="User"
+                class="custom-input"
               />
             </el-form-item>
             <el-form-item>
@@ -23,6 +45,7 @@
                 placeholder="密码" 
                 prefix-icon="Lock"
                 show-password
+                class="custom-input"
               />
             </el-form-item>
             <el-form-item>
@@ -36,7 +59,7 @@
               </div>
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" class="w-100" @click="handlePasswordLogin">
+              <el-button type="primary" class="w-100 login-btn" @click="handlePasswordLogin">
                 登录
               </el-button>
             </el-form-item>
@@ -50,6 +73,7 @@
                 v-model="smsForm.phone" 
                 placeholder="请输入手机号" 
                 prefix-icon="Phone"
+                class="custom-input"
               />
             </el-form-item>
             <el-form-item>
@@ -58,12 +82,13 @@
                 placeholder="请输入验证码"
                 :disabled="!isPhoneValid"
                 @send="handleSendCode"
+                class="custom-input"
               />
             </el-form-item>
             <el-form-item>
               <el-button 
                 type="primary" 
-                class="w-100" 
+                class="w-100 login-btn" 
                 @click="handleSmsLogin"
                 :disabled="!isSmsFormValid"
               >
@@ -75,27 +100,21 @@
       </el-tabs>
       
       <div class="login-footer">
-        <el-link type="primary" :underline="false" @click="goToForgotPassword">
+        <el-link class="footer-link" :underline="false" @click="goToForgotPassword">
           忘记密码?
         </el-link>
-        <el-link
-          v-if="!isAdminMode"
-          type="primary"
-          :underline="false"
-          @click="goToRegister"
-        >
+        <el-link class="footer-link" :underline="false" @click="goToRegister">
           没有账号?立即注册
         </el-link>
-        <span v-else class="admin-hint">请使用管理员账号登录</span>
       </div>
 
       <div class="agreement-footer">
         <span>登录即代表同意</span>
-        <el-link type="primary" :underline="false" @click="goToUserAgreement">
+        <el-link class="footer-link" :underline="false" @click="goToUserAgreement">
           用户协议
         </el-link>
         <span>和</span>
-        <el-link type="primary" :underline="false" @click="goToPrivacyPolicy">
+        <el-link class="footer-link" :underline="false" @click="goToPrivacyPolicy">
           隐私政策
         </el-link>
       </div>
@@ -105,15 +124,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Phone } from '@element-plus/icons-vue'
 import VerificationCode from '@/components/VerificationCode.vue'
 import { loginByPassword, loginBySms, sendAuthCode } from '@/api/user/auth'
-import { clearAuthStorage, getUserInfo, isAdminUser } from '@/utils/auth'
 
 const router = useRouter()
-const route = useRoute()
 const activeTab = ref('password')
 const rememberMe = ref(false)
 
@@ -160,37 +177,6 @@ const handleSendCode = async () => {
   }
 }
 
-const isAdminMode = computed(() => {
-  const mode = route.query?.mode
-  const redirect = route.query?.redirect
-  return mode === 'admin' || (typeof redirect === 'string' && redirect.startsWith('/admin'))
-})
-
-// 登录后统一根据角色跳转（仅前端判断）
-const redirectAfterLogin = (res) => {
-  // login API 已落库 userInfo 到 localStorage，这里兜底读取
-  const userInfo = res?.data?.userInfo || getUserInfo() || {}
-  const isAdmin = isAdminUser(userInfo)
-  const redirect = typeof route.query?.redirect === 'string' ? route.query.redirect : ''
-
-  if (isAdminMode.value) {
-    if (!isAdmin) {
-      ElMessage.error('非管理员账号，无法进入管理后台')
-      clearAuthStorage()
-      return
-    }
-    router.push(redirect && redirect.startsWith('/admin') ? redirect : '/admin/users')
-    return
-  }
-
-  // 普通模式：管理员进后台，普通用户进用户端
-  if (isAdmin) {
-    router.push('/admin/users')
-  } else {
-    router.push('/dashboard')
-  }
-}
-
 // 验证码登录
 const handleSmsLogin = async () => {
   if (!isSmsFormValid.value) {
@@ -203,7 +189,7 @@ const handleSmsLogin = async () => {
     const res = await loginBySms(smsForm.phone, smsForm.code)
     ElMessage.success('登录成功')
     // token已在API函数中设置，无需重复设置
-    redirectAfterLogin(res)
+    router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
@@ -247,7 +233,7 @@ const handlePasswordLogin = async () => {
     }
 
     // token已在API函数中设置，无需重复设置
-    redirectAfterLogin(res)
+    router.push('/dashboard')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   }
@@ -255,10 +241,6 @@ const handlePasswordLogin = async () => {
 
 // 页面跳转
 const goToRegister = () => {
-  if (isAdminMode.value) {
-    ElMessage.warning('管理员账号不支持自助注册，请联系系统管理员创建')
-    return
-  }
   router.push('/register')
 }
 
@@ -276,26 +258,194 @@ const goToPrivacyPolicy = () => {
 </script>
 
 <style scoped>
+/* 全局容器 - 深色主题 */
 .login-container {
+  min-height: 100vh;
+  background: #0a0a0f;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: #f0f2f5;
+  position: relative;
+  overflow: hidden;
 }
 
+/* 背景效果 */
+.login-background {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.3), transparent);
+}
+
+.bg-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.3;
+}
+
+.bg-glow-1 {
+  width: 600px;
+  height: 600px;
+  background: rgba(102, 126, 234, 0.4);
+  top: -200px;
+  left: -100px;
+  animation: float 20s ease-in-out infinite;
+}
+
+.bg-glow-2 {
+  width: 500px;
+  height: 500px;
+  background: rgba(118, 75, 162, 0.4);
+  bottom: -150px;
+  right: -100px;
+  animation: float 25s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -30px); }
+}
+
+/* 视频背景容器 */
+.video-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  filter: brightness(0.7) contrast(1.1) blur(1px);
+  transition: all 0.5s;
+}
+
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    45deg, 
+    rgba(10, 10, 15, 0.4) 0%, 
+    rgba(102, 126, 234, 0.1) 50%, 
+    rgba(118, 75, 162, 0.1) 100%
+  );
+}
+
+/* 登录卡片 */
 .login-card {
   width: 400px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
+  z-index: 2;
 }
 
+.login-card :deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  background: transparent;
+}
+
+.login-title {
+  text-align: center;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 标签页样式 */
 .login-tabs {
   margin-bottom: 20px;
+}
+
+.login-tabs :deep(.el-tabs__nav-wrap::after) {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.login-tabs :deep(.el-tabs__item) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.login-tabs :deep(.el-tabs__item.is-active) {
+  color: #667eea;
+}
+
+.login-tabs :deep(.el-tabs__active-bar) {
+  background-color: #667eea;
+}
+
+/* 输入框样式 */
+.custom-input :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.custom-input :deep(.el-input__wrapper:hover),
+.custom-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 1px #667eea inset;
+}
+
+.custom-input :deep(.el-input__inner) {
+  color: #fff;
+}
+
+.custom-input :deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.custom-input :deep(.el-input__prefix) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 按钮样式 */
+.login-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 20px !important;
+  font-weight: 500;
+  transition: all 0.3s !important;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4) !important;
+}
+
+.login-btn:disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .w-100 {
   width: 100%;
 }
 
+/* 选项区域 */
 .login-options {
   display: flex;
   justify-content: space-between;
@@ -303,6 +453,20 @@ const goToPrivacyPolicy = () => {
   width: 100%;
 }
 
+.login-options :deep(.el-checkbox__label) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.login-options :deep(.el-checkbox__inner) {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.login-options :deep(.el-checkbox__inner:hover) {
+  border-color: #667eea;
+}
+
+/* 底部链接 */
 .login-footer {
   display: flex;
   justify-content: space-between;
@@ -310,19 +474,38 @@ const goToPrivacyPolicy = () => {
   font-size: 14px;
 }
 
-.admin-hint {
-  font-size: 13px;
-  color: #909399;
+.footer-link {
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: color 0.3s;
 }
 
+.footer-link:hover {
+  color: #667eea !important;
+}
+
+/* 协议底部 */
 .agreement-footer {
   text-align: center;
   margin-top: 16px;
   font-size: 12px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .agreement-footer span {
   margin: 0 4px;
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
+  .login-card {
+    width: calc(100% - 40px);
+    margin: 0 20px;
+  }
+  
+  .login-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
 }
 </style>

@@ -1,17 +1,5 @@
 <template>
   <div class="task-list-container">
-    <!-- 页面标题卡片 -->
-    <div class="page-header-card">
-      <div class="header-content">
-        <div class="header-icon">
-          <el-icon size="32" color="#fff"><List /></el-icon>
-        </div>
-        <div class="header-text">
-          <h2>任务管理</h2>
-          <p>查看和管理您的 AI 生成任务</p>
-        </div>
-      </div>
-    </div>
 
     <!-- 主内容区域 -->
     <el-card class="main-content-card">
@@ -496,15 +484,11 @@ const formatFileSize = (bytes) => {
 
 const getFullUrl = (url) => {
   if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-
-  const apiBase = import.meta.env.VITE_APP_BASE_API || ''
-  // 走 vite proxy 或同域部署时：静态资源直接用相对路径即可（如 /storage/** /profile/**）
-  if (!apiBase || apiBase.startsWith('/')) return url
-
-  // 直连后端时：去掉 /api/v1 前缀，拼出资源完整地址
-  const base = apiBase.replace(/\/api\/v1\/?$/, '')
-  return `${base}${url}`
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  const baseUrl = import.meta.env.VITE_APP_BASE_API || ''
+  return baseUrl + url
 }
 
 const downloadFile = (fileUrl, taskId) => {
@@ -528,48 +512,8 @@ const cancelGenerationTask = (taskId) => {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  background: #f9fafb;
   min-height: calc(100vh - 40px);
-}
-
-.page-header-card {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  border-radius: 16px;
-  padding: 24px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 40px rgba(79, 172, 254, 0.3);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-icon {
-  width: 64px;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.header-text h2 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.header-text p {
-  margin: 4px 0 0 0;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.95rem;
 }
 
 .main-content-card {
@@ -701,16 +645,6 @@ const cancelGenerationTask = (taskId) => {
 @media (max-width: 768px) {
   .task-list-container {
     padding: 16px;
-  }
-  
-  .page-header-card {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .header-content {
-    flex-direction: column;
   }
   
   .filter-section .el-form {

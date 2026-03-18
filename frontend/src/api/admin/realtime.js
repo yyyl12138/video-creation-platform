@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const s = axios.create({ baseURL: '/api/realtime', timeout: 10000 })
+const s = axios.create({ baseURL: '/bigdata-api/api/realtime', timeout: 10000 })
 s.interceptors.response.use(r => r.data, e => { console.error('[RT API]', e); return Promise.reject(e) })
 
 export const fetchSnapshot = () => s.get('/snapshot')
