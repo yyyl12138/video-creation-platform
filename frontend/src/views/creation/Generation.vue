@@ -29,9 +29,14 @@
             v-for="type in taskTypes"
             :key="type.value"
             class="task-type-card"
-            :class="{ active: form.taskType === type.value }"
+            :class="[
+              { active: form.taskType === type.value },
+              'task-type-' + type.value.toLowerCase().replace(/_/g, '-'),
+              { 'agent-mode': type.value === 'AGENT_MODE' }
+            ]"
             @click="handleTaskTypeChange(type.value)"
           >
+            <span v-if="type.value === 'AGENT_MODE'" class="agent-badge">AI</span>
             <div class="task-type-icon">
               <el-icon :size="28"><component :is="type.icon" /></el-icon>
             </div>
@@ -52,9 +57,148 @@
             <el-button class="ai-btn" @click="showScriptDialog">
               <el-icon><Document /></el-icon>
               AI脚本生成
+        </el-button>
+      </div>
+    </div>
+
+    <!-- AI创作助手对话模式 -->
+    <div class="chat-mode-container" v-if="chatMode">
+      <!-- 对话模式顶部 -->
+      <div class="chat-header">
+        <div class="header-left">
+          <el-icon class="chat-icon"><ChatDotRound /></el-icon>
+          <span class="chat-title">AI创作助手</span>
+        </div>
+        <div class="header-right">
+          <el-button size="small" @click="exitChatMode">
+            <el-icon><ArrowLeft /></el-icon>
+            返回
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 对话记录区域 -->
+      <div class="chat-messages">
+        <div
+          v-for="(message, index) in chatMessages"
+          :key="index"
+          :class="['message-item', message.role]"
+        >
+          <div class="message-avatar">
+            <el-icon v-if="message.role === 'assistant'" class="assistant-icon"><ChatDotRound /></el-icon>
+            <el-icon v-else class="user-icon"><User /></el-icon>
+          </div>
+          <div class="message-content">
+            <div class="message-text">{{ message.content }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入区域 -->
+      <div class="chat-input-card">
+        <!-- 输入框 -->
+        <div class="chat-input-main">
+          <el-input
+            v-model="chatInput"
+            type="textarea"
+            :rows="2"
+            placeholder="试试描述一段简短的故事情节，最关键的是主体、环境、时间、风格..."
+            class="chat-input"
+            @keydown.enter.ctrl="sendChatMessage"
+          />
+        </div>
+
+        <!-- 任务类型选择 -->
+        <div class="chat-task-tabs">
+          <div
+            v-for="type in taskTypes"
+            :key="type.value"
+            :class="['task-tab', { active: form.taskType === type.value }]"
+            @click="changeTaskType(type.value)"
+          >
+            <el-icon><component :is="type.icon" /></el-icon>
+            <span>{{ type.label }}</span>
+          </div>
+        </div>
+
+        <!-- 底部工具栏 -->
+        <div class="chat-input-toolbar">
+          <div class="toolbar-section">
+            <div class="toolbar-label">模型</div>
+            <el-select v-model="form.modelName" size="small" class="model-select-enhanced">
+              <el-option
+                v-for="model in currentModels"
+                :key="model.value"
+                :label="model.label"
+                :value="model.value"
+              />
+            </el-select>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <div class="toolbar-section params-section">
+            <div class="toolbar-label" v-if="form.taskType === 'TEXT_TO_VIDEO' || form.taskType === 'IMAGE_TO_VIDEO' || form.taskType === 'TEXT_TO_IMAGE'">参数</div>
+            <div class="params-grid">
+              <!-- 分辨率：适用于图片和视频生成 -->
+              <div class="param-item" v-if="form.taskType === 'TEXT_TO_IMAGE' || form.taskType === 'TEXT_TO_VIDEO' || form.taskType === 'IMAGE_TO_VIDEO'">
+                <span class="param-label">分辨率</span>
+                <el-select v-model="chatResolution" size="small" class="param-select-enhanced">
+                  <el-option label="768P" value="768P" />
+                  <el-option label="1024P" value="1024P" />
+                </el-select>
+              </div>
+
+              <!-- 比例：仅适用于图片生成 -->
+              <div class="param-item" v-if="form.taskType === 'TEXT_TO_IMAGE'">
+                <span class="param-label">比例</span>
+                <el-select v-model="chatRatio" size="small" class="param-select-enhanced">
+                  <el-option label="1:1" value="1:1" />
+                  <el-option label="16:9" value="16:9" />
+                  <el-option label="4:3" value="4:3" />
+                  <el-option label="3:4" value="3:4" />
+                  <el-option label="9:16" value="9:16" />
+                </el-select>
+              </div>
+
+              <!-- 模式：适用于视频生成 -->
+              <div class="param-item" v-if="form.taskType === 'TEXT_TO_VIDEO' || form.taskType === 'IMAGE_TO_VIDEO'">
+                <span class="param-label">模式</span>
+                <el-select v-model="chatRenderMode" size="small" class="param-select-enhanced">
+                  <el-option label="普通" value="normal" />
+                  <el-option label="高清" value="hd" />
+                  <el-option label="极速" value="fast" />
+                </el-select>
+              </div>
+
+              <!-- 时长：仅适用于视频生成 -->
+              <div class="param-item" v-if="form.taskType === 'TEXT_TO_VIDEO' || form.taskType === 'IMAGE_TO_VIDEO'">
+                <span class="param-label">时长</span>
+                <el-select v-model="chatDuration" size="small" class="param-select-enhanced">
+                  <el-option label="6s" :value="6" />
+                  <el-option label="10s" :value="10" />
+                  <el-option label="15s" :value="15" />
+                  <el-option label="30s" :value="30" />
+                </el-select>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar-actions">
+            <el-button
+              type="primary"
+              :loading="chatSubmitting"
+              @click="sendChatMessage"
+              class="send-btn-enhanced"
+            >
+              <el-icon><Position /></el-icon>
+              <span class="send-text">发送</span>
+              <span class="send-count">12</span>
             </el-button>
           </div>
         </div>
+      </div>
+    </div>
 
         <div class="textarea-wrapper">
           <textarea
@@ -103,26 +247,32 @@
           <span class="section-title-text">选择模型</span>
           <span class="section-desc">{{ getModelTypeLabel() }}</span>
         </div>
-        <div class="models-grid">
+        <div class="models-list">
           <div
-            v-for="model in currentModels"
+            v-for="(model, index) in currentModels"
             :key="model.value"
-            class="model-selection-card"
-            :class="{ selected: form.modelName === model.value }"
+            class="model-card"
+            :class="[
+              { selected: form.modelName === model.value },
+              'model-color-' + (index % 5)
+            ]"
             @click="selectModel(model.value)"
           >
-            <div class="model-card-icon">
-              <el-icon :size="24"><component :is="getModelIcon(model.label)" /></el-icon>
+            <div class="model-icon">
+              <el-icon :size="18"><component :is="getModelIcon(model.label)" /></el-icon>
             </div>
-            <div class="model-card-content">
-              <div class="model-name">{{ model.label }}</div>
-              <div class="model-desc">{{ getModelDescription(model.label) }}</div>
-              <div class="model-tag" v-if="getModelTag(model.label)">
-                {{ getModelTag(model.label) }}
+            <div class="model-info">
+              <div class="model-header">
+                <span class="model-title">{{ model.label }}</span>
+                <span class="model-badge" v-if="getModelTag(model.label)">
+                  {{ getModelTag(model.label) }}
+                </span>
               </div>
+              <div class="model-subtitle">{{ getModelDescription(model.label) }}</div>
             </div>
-            <div class="model-check" v-if="form.modelName === model.value">
-              <el-icon><Check /></el-icon>
+            <div class="model-action">
+              <span class="action-text">去使用</span>
+              <el-icon v-if="form.modelName === model.value" class="check-icon"><Check /></el-icon>
             </div>
           </div>
         </div>
@@ -312,7 +462,11 @@ import {
   ChatDotRound,
   VideoCamera,
   DocumentCopy,
-  TrendCharts
+  TrendCharts,
+  Service,
+  Position,
+  User,
+  ArrowLeft
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -359,6 +513,7 @@ const generatedVideos = ref([
 
 // 任务类型枚举
 const TaskTypes = {
+  AGENT_MODE: 'AGENT_MODE',
   TEXT_TO_TEXT: 'TEXT_TO_TEXT',
   TEXT_TO_IMAGE: 'TEXT_TO_IMAGE',
   TEXT_TO_VIDEO: 'TEXT_TO_VIDEO',
@@ -367,6 +522,9 @@ const TaskTypes = {
 
 // 模型配置
 const modelsByTaskType = {
+  [TaskTypes.AGENT_MODE]: [
+    { label: 'AI Agent', value: 'AI Agent' }
+  ],
   [TaskTypes.TEXT_TO_TEXT]: [
     { label: 'DeepSeek V3', value: 'DeepSeek V3' },
     { label: 'Qwen Flash', value: 'Qwen Flash' }
@@ -385,10 +543,25 @@ const modelsByTaskType = {
   ]
 }
 
-const currentModels = ref(modelsByTaskType[TaskTypes.TEXT_TO_VIDEO])
+const currentModels = ref(modelsByTaskType[TaskTypes.AGENT_MODE])
 const uploadedImage = ref('')
 const fileInput = ref(null)
 const submitting = ref(false)
+
+// 对话模式状态
+const chatMode = ref(false)
+const chatMessages = ref([
+  {
+    role: 'assistant',
+    content: '您好！我是AI创作助手，可以帮助您生成视频、图片或文本内容。请告诉我您的需求，或者直接开始创作！'
+  }
+])
+const chatInput = ref('')
+const chatSubmitting = ref(false)
+const chatResolution = ref('768P')
+const chatRenderMode = ref('normal')
+const chatDuration = ref(6)
+const chatRatio = ref('16:9')
 
 // AI辅助功能状态
 const hotspotsDialogVisible = ref(false)
@@ -443,6 +616,7 @@ const scriptForm = reactive({
 })
 
 const taskTypes = [
+  { value: 'AGENT_MODE', label: 'Agent智能', icon: 'Service' },
   { value: 'TEXT_TO_VIDEO', label: '视频生成', icon: 'VideoPlay' },
   { value: 'IMAGE_TO_VIDEO', label: '图生视频', icon: 'Picture' },
   { value: 'TEXT_TO_IMAGE', label: '图片生成', icon: 'PictureFilled' },
@@ -450,8 +624,8 @@ const taskTypes = [
 ]
 
 const form = reactive({
-  taskType: 'TEXT_TO_VIDEO',
-  modelName: 'Kling',
+  taskType: 'AGENT_MODE',
+  modelName: 'AI Agent',
   inputConfig: {
     prompt: '',
     negativePrompt: '',
@@ -461,8 +635,74 @@ const form = reactive({
   }
 })
 
+// Agent智能识别任务类型
+const detectTaskType = (prompt) => {
+  if (!prompt) return 'TEXT_TO_TEXT'
+  
+  const lowerPrompt = prompt.toLowerCase()
+  
+  // 视频相关关键词
+  const videoKeywords = ['视频', '动画', '动态', '运动', '播放', '影片', '电影', '短片', '镜头', '动作', '移动', '奔跑', '飞行', '流动', '舞动']
+  const imageKeywords = ['图片', '图像', '画面', '照片', '绘制', '插画', '海报', '壁纸', '风景', '肖像', '艺术']
+  const textKeywords = ['文章', '文案', '内容', '写', '生成文本', '创作', '故事', '剧本', '描述', '介绍', '说明']
+  
+  // 计算各类型匹配分数
+  let videoScore = 0
+  let imageScore = 0
+  let textScore = 0
+  
+  videoKeywords.forEach(kw => {
+    if (lowerPrompt.includes(kw)) videoScore += 2
+  })
+  
+  imageKeywords.forEach(kw => {
+    if (lowerPrompt.includes(kw)) imageScore += 2
+  })
+  
+  textKeywords.forEach(kw => {
+    if (lowerPrompt.includes(kw)) textScore += 2
+  })
+  
+  // 根据动词判断
+  if (lowerPrompt.includes('生成视频') || lowerPrompt.includes('制作视频') || lowerPrompt.includes('创建视频')) {
+    videoScore += 5
+  }
+  if (lowerPrompt.includes('生成图片') || lowerPrompt.includes('生成图像') || lowerPrompt.includes('画一张')) {
+    imageScore += 5
+  }
+  if (lowerPrompt.includes('写一篇') || lowerPrompt.includes('帮我写') || lowerPrompt.includes('生成文字')) {
+    textScore += 5
+  }
+  
+  // 返回得分最高的类型
+  if (videoScore >= imageScore && videoScore >= textScore && videoScore > 0) {
+    return 'TEXT_TO_VIDEO'
+  }
+  if (imageScore >= textScore && imageScore > 0) {
+    return 'TEXT_TO_IMAGE'
+  }
+  if (textScore > 0) {
+    return 'TEXT_TO_TEXT'
+  }
+  
+  // 默认返回文本生成
+  return 'TEXT_TO_TEXT'
+}
+
+// 根据识别的任务类型获取最佳模型
+const getBestModelForTask = (taskType) => {
+  const modelMap = {
+    'TEXT_TO_VIDEO': 'Kling',
+    'TEXT_TO_IMAGE': 'Wanx v1',
+    'TEXT_TO_TEXT': 'DeepSeek V3',
+    'IMAGE_TO_VIDEO': 'Kling'
+  }
+  return modelMap[taskType] || 'DeepSeek V3'
+}
+
 const getPlaceholder = () => {
   const placeholders = {
+    AGENT_MODE: '智能模式下，直接描述你的需求，AI会自动识别并选择最佳生成方式...\n例如：帮我生成一段熊猫玩耍的视频 / 画一张赛博朋克风格的城市夜景 / 写一篇关于AI的文章',
     TEXT_TO_VIDEO: '输入视频生成的提示词，例如：一只可爱的熊猫在竹林里玩耍...',
     IMAGE_TO_VIDEO: '输入图生视频的提示词...',
     TEXT_TO_IMAGE: '输入图片生成的提示词...',
@@ -496,7 +736,8 @@ const getModelIcon = (modelName) => {
     'Wanx v1': 'PictureFilled',
     'Kling': 'VideoCamera',
     'Minimax': 'TrendCharts',
-    'Doubao Seedance': 'VideoPlay'
+    'Doubao Seedance': 'VideoPlay',
+    'AI Agent': 'Service'
   }
   return iconMap[modelName] || 'Cpu'
 }
@@ -509,7 +750,8 @@ const getModelDescription = (modelName) => {
     'Wanx v1': '高精度图像生成模型',
     'Kling': '专业级视频生成模型',
     'Minimax': '高质量视频与图像生成',
-    'Doubao Seedance': '多模态视频创作模型'
+    'Doubao Seedance': '多模态视频创作模型',
+    'AI Agent': '智能任务编排与多轮对话助手'
   }
   return descMap[modelName] || 'AI智能模型'
 }
@@ -520,7 +762,8 @@ const getModelTag = (modelName) => {
     'DeepSeek V3': 'NEW',
     'Qwen Flash': '推荐',
     'Kling': '热门',
-    'Minimax': 'NEW'
+    'Minimax': 'NEW',
+    'AI Agent': 'AI智能'
   }
   return tagMap[modelName] || ''
 }
@@ -528,6 +771,7 @@ const getModelTag = (modelName) => {
 // 获取模型类型标签
 const getModelTypeLabel = () => {
   const typeLabelMap = {
+    'AGENT_MODE': '智能识别模式',
     'TEXT_TO_TEXT': '文本生成',
     'TEXT_TO_IMAGE': '图片生成',
     'TEXT_TO_VIDEO': '视频生成',
@@ -690,38 +934,107 @@ const submitTask = async () => {
   submitting.value = true
 
   try {
-    // 构建提交数据
-    const submitData = {
-      taskType: form.taskType,
-      modelName: form.modelName,
-      inputConfig: {
-        prompt: form.inputConfig.prompt,
-        negativePrompt: form.inputConfig.negativePrompt,
-        duration: form.inputConfig.duration,
-        ratio: form.inputConfig.ratio,
-        image: form.inputConfig.image
-      }
+    // Agent模式：自动识别任务类型
+    let finalTaskType = form.taskType
+    let finalModelName = form.modelName
+
+    if (form.taskType === 'AGENT_MODE') {
+      // 智能识别任务类型
+      finalTaskType = detectTaskType(form.inputConfig.prompt)
+      // 根据识别结果选择最佳模型
+      finalModelName = getBestModelForTask(finalTaskType)
     }
 
-    // 跳转到对话式创作界面，携带初始参数
-    router.push({
-      path: '/creation/chat',
-      query: {
-        taskType: form.taskType,
-        modelName: form.modelName,
-        prompt: form.inputConfig.prompt,
-        image: form.inputConfig.image || '',
-        duration: form.inputConfig.duration,
-        ratio: form.inputConfig.ratio
-      }
-    })
+    // 保存当前状态
+    form.taskType = finalTaskType
+    form.modelName = finalModelName
+
+    // 进入对话模式
+    chatMode.value = true
+
+    // 添加用户消息到聊天记录
+    if (form.inputConfig.prompt) {
+      chatMessages.value.push({
+        role: 'user',
+        content: form.inputConfig.prompt
+      })
+    }
+
+    // 模拟AI响应
+    setTimeout(() => {
+      const taskTypeLabel = finalTaskType === 'TEXT_TO_VIDEO' ? '视频生成' :
+                           finalTaskType === 'TEXT_TO_IMAGE' ? '图片生成' :
+                           finalTaskType === 'IMAGE_TO_VIDEO' ? '图生视频' : '文本生成'
+      chatMessages.value.push({
+        role: 'assistant',
+        content: `好的！我已为您选择了【${taskTypeLabel}】模式，使用【${finalModelName}】模型。请继续告诉我更多细节，或者直接开始创作。`
+      })
+    }, 500)
 
     submitting.value = false
   } catch (error) {
-    console.error('跳转失败:', error)
-    ElMessage.error('跳转失败，请稍后重试')
+    console.error('进入对话模式失败:', error)
+    ElMessage.error('进入对话模式失败，请稍后重试')
     submitting.value = false
   }
+}
+
+// 发送聊天消息
+const sendChatMessage = async () => {
+  if (!chatInput.value.trim()) {
+    ElMessage.warning('请输入消息')
+    return
+  }
+
+  chatSubmitting.value = true
+
+  // 添加用户消息
+  chatMessages.value.push({
+    role: 'user',
+    content: chatInput.value
+  })
+
+  const userMessage = chatInput.value
+  chatInput.value = ''
+
+  // 模拟AI响应
+  setTimeout(() => {
+    // 检测用户意图
+    if (userMessage.includes('生成') || userMessage.includes('开始') || userMessage.includes('创作')) {
+      chatMessages.value.push({
+        role: 'assistant',
+        content: '好的，正在为您生成内容...'
+      })
+    } else {
+      chatMessages.value.push({
+        role: 'assistant',
+        content: '收到！我已经记下您的需求。您可以继续补充细节，或者让我直接开始创作。'
+      })
+    }
+    chatSubmitting.value = false
+  }, 800)
+}
+
+// 退出对话模式
+const exitChatMode = () => {
+  chatMode.value = false
+}
+
+// 重新选择任务类型
+const changeTaskType = (newTaskType) => {
+  form.taskType = newTaskType
+  currentModels.value = modelsByTaskType[newTaskType]
+  form.modelName = currentModels.value[0]?.value || ''
+
+  const taskTypeLabel = newTaskType === 'TEXT_TO_VIDEO' ? '视频生成' :
+                       newTaskType === 'TEXT_TO_IMAGE' ? '图片生成' :
+                       newTaskType === 'IMAGE_TO_VIDEO' ? '图生视频' :
+                       newTaskType === 'TEXT_TO_TEXT' ? '文本生成' : 'Agent智能'
+
+  chatMessages.value.push({
+    role: 'assistant',
+    content: `已切换为【${taskTypeLabel}】模式`
+  })
 }
 </script>
 
@@ -781,11 +1094,12 @@ const submitTask = async () => {
 
 .task-type-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 
 .task-type-card {
+  position: relative;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-radius: 12px;
   padding: 20px 16px;
@@ -839,6 +1153,157 @@ const submitTask = async () => {
 .task-type-card:hover .task-type-label,
 .task-type-card.active .task-type-label {
   color: #667eea;
+}
+
+/* Agent智能模式特殊样式 */
+.task-type-card.agent-mode {
+  background: #fff;
+  border-color: #e5e7eb;
+}
+
+.task-type-card.agent-mode .task-type-icon {
+  background: linear-gradient(135deg, #a78bfa20 0%, #8b5cf620 100%);
+  color: #8b5cf6;
+}
+
+.task-type-card.agent-mode .task-type-label {
+  color: #303133;
+}
+
+.task-type-card.agent-mode:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+}
+
+.task-type-card.agent-mode.active {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+}
+
+.task-type-card.agent-mode.active .task-type-icon {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.task-type-card.agent-mode.active .task-type-label {
+  color: #8b5cf6;
+}
+
+/* 不同任务类型的清新配色 */
+/* Agent智能 - 薰衣草紫 */
+.task-type-agent-mode .task-type-icon {
+  background: linear-gradient(135deg, #a78bfa20 0%, #8b5cf620 100%);
+  color: #8b5cf6;
+}
+.task-type-agent-mode:hover .task-type-icon,
+.task-type-agent-mode.active .task-type-icon {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  color: white;
+}
+
+/* 视频生成 - 天蓝色 */
+.task-type-text-to-video .task-type-icon {
+  background: linear-gradient(135deg, #38bdf820 0%, #0ea5e920 100%);
+  color: #0ea5e9;
+}
+.task-type-text-to-video:hover {
+  border-color: #0ea5e9;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15);
+}
+.task-type-text-to-video.active {
+  border-color: #0ea5e9;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+.task-type-text-to-video:hover .task-type-icon,
+.task-type-text-to-video.active .task-type-icon {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  color: white;
+}
+.task-type-text-to-video:hover .task-type-label,
+.task-type-text-to-video.active .task-type-label {
+  color: #0ea5e9;
+}
+
+/* 图生视频 - 薄荷绿 */
+.task-type-image-to-video .task-type-icon {
+  background: linear-gradient(135deg, #34d39920 0%, #10b98120 100%);
+  color: #10b981;
+}
+.task-type-image-to-video:hover {
+  border-color: #10b981;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+}
+.task-type-image-to-video.active {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+.task-type-image-to-video:hover .task-type-icon,
+.task-type-image-to-video.active .task-type-icon {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  color: white;
+}
+.task-type-image-to-video:hover .task-type-label,
+.task-type-image-to-video.active .task-type-label {
+  color: #10b981;
+}
+
+/* 图片生成 - 珊瑚粉 */
+.task-type-text-to-image .task-type-icon {
+  background: linear-gradient(135deg, #fb718520 0%, #f43f5e20 100%);
+  color: #f43f5e;
+}
+.task-type-text-to-image:hover {
+  border-color: #f43f5e;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.15);
+}
+.task-type-text-to-image.active {
+  border-color: #f43f5e;
+  background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
+}
+.task-type-text-to-image:hover .task-type-icon,
+.task-type-text-to-image.active .task-type-icon {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  color: white;
+}
+.task-type-text-to-image:hover .task-type-label,
+.task-type-text-to-image.active .task-type-label {
+  color: #f43f5e;
+}
+
+/* 文本生成 - 橙黄色 */
+.task-type-text-to-text .task-type-icon {
+  background: linear-gradient(135deg, #fbbf2420 0%, #f59e0b20 100%);
+  color: #f59e0b;
+}
+.task-type-text-to-text:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+}
+.task-type-text-to-text.active {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+.task-type-text-to-text:hover .task-type-icon,
+.task-type-text-to-text.active .task-type-icon {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+}
+.task-type-text-to-text:hover .task-type-label,
+.task-type-text-to-text.active .task-type-label {
+  color: #f59e0b;
+}
+
+.task-type-card.agent-mode .agent-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .input-card {
@@ -1073,41 +1538,45 @@ const submitTask = async () => {
   color: #909399;
 }
 
-.models-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.model-selection-card {
-  position: relative;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 12px;
-  padding: 16px;
-  border: 2px solid #e5e7eb;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.models-list {
   display: flex;
-  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-.model-selection-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
-  transform: translateY(-2px);
-}
-
-.model-selection-card.selected {
-  border-color: #667eea;
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
-}
-
-.model-card-icon {
-  width: 48px;
-  height: 48px;
+.model-card {
+  position: relative;
+  background: #fff;
   border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.model-card:hover {
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.model-card.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%);
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);
+}
+
+.model-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1116,52 +1585,121 @@ const submitTask = async () => {
   color: white;
 }
 
-.model-card-content {
+/* 模型卡片不同颜色 */
+.model-color-0 .model-icon {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+}
+.model-color-0.selected {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+.model-color-0.selected .model-icon {
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+.model-color-1 .model-icon {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+}
+.model-color-1.selected {
+  border-color: #0ea5e9;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+.model-color-1.selected .model-icon {
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+}
+
+.model-color-2 .model-icon {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+}
+.model-color-2.selected {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+.model-color-2.selected .model-icon {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.model-color-3 .model-icon {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+}
+.model-color-3.selected {
+  border-color: #f43f5e;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+}
+.model-color-3.selected .model-icon {
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+}
+
+.model-color-4 .model-icon {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+.model-color-4.selected {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+.model-color-4.selected .model-icon {
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.model-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.model-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 4px;
-}
-
-.model-desc {
-  font-size: 12px;
-  color: #6b7280;
-  line-height: 1.4;
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.model-tag {
-  display: inline-block;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
-  color: #dc2626;
-}
-
-.model-check {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  background: #667eea;
-  border-radius: 50%;
+.model-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: white;
+  gap: 6px;
+}
+
+.model-title {
   font-size: 14px;
+  font-weight: 600;
+  color: #1f1f1f;
+  line-height: 1.3;
+}
+
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #ff4d4f;
+  color: white;
+  line-height: 1;
+}
+
+.model-subtitle {
+  font-size: 12px;
+  color: #8c8c8c;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.action-text {
+  font-size: 12px;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.check-icon {
+  color: #52c41a;
+  font-size: 16px;
 }
 
 .param-left {
@@ -1276,7 +1814,354 @@ const submitTask = async () => {
   color: #909399;
 }
 
+/* 对话模式样式 */
+.chat-mode-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #f8f9fb 0%, #eef1f5 100%);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.chat-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
+}
+
+.chat-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.chat-icon {
+  font-size: 26px;
+}
+
+.chat-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.chat-header .header-right .el-button {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.chat-header .header-right .el-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: linear-gradient(180deg, #fafbfc 0%, #f5f7fa 100%);
+}
+
+.message-item {
+  display: flex;
+  gap: 12px;
+  max-width: 75%;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-item.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-avatar .assistant-icon {
+  font-size: 22px;
+  color: #667eea;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+}
+
+.message-avatar .user-icon {
+  font-size: 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.message-content {
+  flex: 1;
+}
+
+.message-text {
+  background: white;
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  line-height: 1.7;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.message-item.user .message-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.chat-input-card {
+  background: white;
+  margin: 0 24px 24px 24px;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+}
+
+.chat-input-main {
+  margin-bottom: 12px;
+}
+
+.chat-input :deep(.el-textarea__inner) {
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  background: #fafbfc;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+.chat-input :deep(.el-textarea__inner:focus) {
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.chat-input :deep(.el-textarea__inner::placeholder) {
+  color: #a0aec0;
+}
+
+.chat-task-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.task-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 13px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.task-tab:hover {
+  background: #f5f7fa;
+  border-color: #c0c4cc;
+  color: #303133;
+  transform: translateY(-1px);
+}
+
+.task-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.task-tab .el-icon {
+  font-size: 15px;
+}
+
+.chat-input-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-radius: 8px;
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #909399;
+  white-space: nowrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(180deg, transparent 0%, #dcdfe6 50%, transparent 100%);
+}
+
+.params-section {
+  flex: 1;
+  gap: 12px;
+}
+
+.params-grid {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.param-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.param-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+}
+
+.param-label {
+  font-size: 12px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.model-select-enhanced,
+.param-select-enhanced {
+  width: auto;
+  min-width: 70px;
+}
+
+.model-select-enhanced :deep(.el-input__wrapper),
+.param-select-enhanced :deep(.el-input__wrapper) {
+  background: transparent;
+  border: none;
+  padding: 0 4px;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.model-select-enhanced :deep(.el-input__inner),
+.param-select-enhanced :deep(.el-input__inner) {
+  color: #303133;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.send-btn-enhanced {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.send-btn-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.send-btn-enhanced:active {
+  transform: translateY(0);
+}
+
+.send-text {
+  font-weight: 600;
+}
+
+.send-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* 响应式 */
+@media (max-width: 1024px) {
+  .task-type-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .task-type-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1297,3 +2182,5 @@ const submitTask = async () => {
   }
 }
 </style>
+
+
